@@ -3,6 +3,8 @@ import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
 
+
+// AQUI ES DONDE VAMOS A ESTRUCTURAR NUESTRA APLICACION
 function App() {
   const [count, setCount] = useState(0)
 
