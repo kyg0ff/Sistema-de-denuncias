@@ -1,47 +1,80 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ciudad Segura - Denuncias Urbanas</title>
+    <meta charset="UTF-8"> <!-- Codificación en UTF-8 para soportar acentos y caracteres especiales -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Hace que el sitio sea responsive -->
+    <title>Ciudad Segura - Denuncias Urbanas</title> <!-- Título que aparece en la pestaña del navegador -->
+
+    <!-- Archivo CSS propio -->
     <link rel="stylesheet" href="estilos.css">
+
+    <!-- Iconos de FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
+
 <body>
 
+    <!-- =====================================
+         CABECERA DE LA PÁGINA
+    ========================================== -->
     <header class="cabecera">
         <div class="cabecera-contenido">
+
+            <!-- LOGO E ÍCONO -->
             <div class="logo">
-                <i class="fa-solid fa-shield-halved"></i>
-                <span>Ciudad Segura - Denuncias Urbanas</span>
+                <i class="fa-solid fa-shield-halved"></i> <!-- Ícono del escudo -->
+                <span>Ciudad Segura - Denuncias Urbanas</span> <!-- Nombre del sistema -->
             </div>
+
+            <!-- BARRA DE NAVEGACIÓN -->
             <nav class="navegacion">
-                <button class="boton-primario">Registrarse</button>
-                <button class="boton-secundario">Iniciar sesión</button>
-                <a href="perfil.html" class="boton-icono"><i class="fa-solid fa-user"></i></a>
+                <button class="boton-primario">Registrarse</button> <!-- Botón de registro -->
+                <button class="boton-secundario">Iniciar sesión</button> <!-- Botón de login -->
+                <a href="perfil.html" class="boton-icono">
+                    <i class="fa-solid fa-user"></i> <!-- Ícono del usuario -->
+                </a>
             </nav>
         </div>
     </header>
 
+    <!-- =====================================
+         CONTENEDOR PRINCIPAL
+    ========================================== -->
     <div class="contenedor-principal">
         <main>
+
+            <!-- =====================================
+                 SECCIÓN PRINCIPAL / HÉROE
+            ========================================== -->
             <section class="seccion-heroe">
                 <div class="contenido-heroe">
                     <h1>Tu voz cuenta. Reporta, participa y mejora tu ciudad</h1>
+                    <!-- Botón para iniciar una denuncia -->
                     <button class="boton-accion">Reportar denuncia ahora</button>
                 </div>
             </section>
 
+            <!-- =====================================
+                 SECCIÓN: DENUNCIAS RECIENTES
+            ========================================== -->
             <section class="seccion">
                 <div class="cabecera-seccion">
                     <h2>Denuncias Recientes</h2>
+
+                    <!-- Botón de búsqueda de denuncias -->
                     <button class="boton-buscar">
                         <i class="fa-solid fa-search"></i>
                         <span>Buscar denuncias</span>
                     </button>
                 </div>
+
+                <!-- LISTA DE CARDS DE DENUNCIAS -->
                 <div class="lista-denuncias">
+
+                    <!-- CARD 1 -->
                     <div class="denuncia-card">
+
+                        <!-- Título y etiquetas -->
                         <div class="denuncia-header">
                             <h3>Vehículo mal estacionado en Av. Principal</h3>
                             <div class="etiquetas">
@@ -49,7 +82,11 @@
                                 <span class="etiqueta-estado nueva">Nueva</span>
                             </div>
                         </div>
+
+                        <!-- Descripción corta -->
                         <p class="denuncia-descripcion">Descripción</p>
+
+                        <!-- Meta información -->
                         <div class="denuncia-meta">
                             <div class="meta-item">
                                 <i class="fa-solid fa-location-dot"></i>
@@ -65,7 +102,10 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- CARD 2 -->
                     <div class="denuncia-card">
+
                         <div class="denuncia-header">
                             <h3>Vehículo abandonado</h3>
                             <div class="etiquetas">
@@ -73,7 +113,10 @@
                                 <span class="etiqueta-estado en-proceso">En Proceso</span>
                             </div>
                         </div>
+
                         <p class="denuncia-descripcion">Descripción</p>
+
+                        <!-- Meta info -->
                         <div class="denuncia-meta">
                             <div class="meta-item">
                                 <i class="fa-solid fa-location-dot"></i>
@@ -89,37 +132,55 @@
                             </div>
                         </div>
                     </div>
-                </div>
+
+                </div> <!-- Cierre lista denuncias -->
             </section>
 
+            <!-- =====================================
+                 SECCIÓN: ESTADÍSTICAS
+            ========================================== -->
             <section class="seccion">
                 <h2>Estadísticas Públicas</h2>
+
+                <!-- Contenedor de estadísticas -->
                 <div class="contenedor-estadisticas">
+
                     <div class="caja-estadistica">
                         <span class="etiqueta">Total de denuncias</span>
                         <span class="valor">1,234</span>
                     </div>
+
                     <div class="caja-estadistica">
                         <span class="etiqueta">% Resueltas</span>
                         <span class="valor">75%</span>
                     </div>
+
                     <div class="caja-estadistica">
                         <span class="etiqueta">Tiempo promedio de resolución</span>
                         <span class="valor">5 días</span>
                     </div>
+
                 </div>
             </section>
         </main>
     </div>
 
+    <!-- =====================================
+         PIE DE PÁGINA
+    ========================================== -->
     <footer class="pie-de-pagina">
+
+        <!-- Enlaces inferiores -->
         <div class="enlaces-footer">
             <a href="#">Sobre el sistema</a>
             <a href="#">Enlaces a ODS</a>
             <a href="#">Datos de contacto</a>
             <a href="#">Políticas de privacidad</a>
         </div>
+
+        <!-- Derechos reservados -->
         <p class="copyright">© 2025 Denuncias.com Todos los derechos reservados.</p>
+
     </footer>
 
 </body>
