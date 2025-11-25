@@ -1,0 +1,281 @@
+/* src/App.css */
+
+:root {
+  /* --- PALETA CORPORATIVA --- */
+  --deep-blue: #1a3d7d;    /* 1. Azul Marino Profundo (Navbar, Textos fuertes) */
+  --medium-blue: #236ba0;  /* 2. Azul Intermedio (Botones, Títulos) */
+  --vibrant-blue: #299dc9; /* 3. Azul Vibrante (Acentos, Iconos, Botones acción) */
+  --soft-blue: #99dfdf;    /* 4. Cian/Turquesa Claro (Fondos decorativos) */
+  --light-gray: #edf0f0;   /* 5. Gris Hielo (Fondo App) */
+
+  /* Mapeo Funcional */
+  --primary: var(--medium-blue);
+  --primary-hover: var(--deep-blue);
+  --secondary: var(--vibrant-blue);
+  
+  --bg-body: var(--light-gray);
+  --bg-card: #ffffff;
+  
+  /* Textos */
+  --text-main: #1a3d7d;    /* Azul profundo para lectura principal */
+  --text-muted: #537596;   /* Gris azulado para subtítulos */
+  
+  --border: #d0e1f0;       /* Borde suave azulado */
+  
+  /* --- EFECTOS --- */
+  --radius: 16px;          /* Bordes más redondeados y modernos */
+  --shadow-sm: 0 1px 3px rgba(26, 61, 125, 0.08);
+  --shadow-md: 0 4px 6px -1px rgba(26, 61, 125, 0.1);
+  --shadow-lg: 0 20px 25px -5px rgba(26, 61, 125, 0.15);
+  --shadow-glow: 0 0 15px rgba(41, 157, 201, 0.3);
+  
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --font: "Public Sans", "Inter", sans-serif;
+}
+
+/* --- RESET BÁSICO --- */
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  background-color: var(--bg-body);
+  color: var(--text-main);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --- LAYOUT GENERAL --- */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.flex-row { display: flex; align-items: center; gap: 1rem; }
+.flex-between { display: flex; justify-content: space-between; align-items: center; }
+.flex-center { display: flex; justify-content: center; align-items: center; }
+
+/* --- GRIDS --- */
+.grid-stats { 
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; 
+}
+.cards-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; padding-bottom: 2rem;
+}
+
+/* --- TARJETAS Y ANIMACIONES (HOME) --- */
+.card-hover-effect {
+  transition: var(--transition);
+  border: 1px solid var(--border);
+  background-color: var(--bg-card);
+}
+.card-hover-effect:hover {
+  transform: translateY(-8px);
+  box-shadow: var(--shadow-lg), var(--shadow-glow);
+  border-color: var(--vibrant-blue);
+  z-index: 10;
+}
+
+.img-placeholder {
+  background-color: var(--soft-blue);
+  width: 100%; height: 100%; position: relative;
+}
+
+/* --- BOTONES --- */
+.btn {
+  height: 44px; padding: 0 24px; border-radius: 12px; border: none;
+  font-weight: 700; font-size: 0.95rem; cursor: pointer; transition: var(--transition);
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+}
+
+.btn-primary { 
+  background: var(--primary); color: white; 
+}
+.btn-primary:hover { 
+  background: var(--primary-hover); transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(35, 107, 160, 0.4);
+}
+
+.btn-secondary { 
+  background: white; color: var(--primary); border: 2px solid var(--soft-blue);
+}
+.btn-secondary:hover { 
+  border-color: var(--primary); background: #f0fafa;
+}
+
+.btn-ghost { 
+  background: rgba(255,255,255,0.1); color: white; 
+  border: 1px solid rgba(255,255,255,0.3);
+}
+.btn-ghost:hover { background: rgba(255,255,255,0.2); }
+
+/* Tipografía */
+h1, h2, h3 { letter-spacing: -0.02em; color: var(--deep-blue); }
+
+/* =========================================
+   ESTILOS PERFIL DE USUARIO (DASHBOARD)
+   ========================================= */
+
+.profile-card {
+  background-color: white;
+  border-radius: 16px;
+  padding: 32px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+  height: 100%; /* Para que las columnas tengan misma altura */
+}
+
+.section-header {
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid var(--light-gray);
+}
+
+.section-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--deep-blue);
+  font-weight: 700;
+}
+
+/* Grilla compacta para formularios (Nombre/Apellido en una línea) */
+.form-grid-compact {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* --- INPUTS DEL PERFIL --- */
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.input-group label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-wrapper input {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid #d0e1f0; /* Borde azul muy suave */
+  background-color: #fcfdfe;
+  color: var(--deep-blue);
+  font-family: var(--font);
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+}
+
+.input-wrapper input:focus {
+  background-color: white;
+  border-color: var(--vibrant-blue);
+  box-shadow: 0 0 0 4px rgba(41, 157, 201, 0.15); /* Focus ring */
+  outline: none;
+}
+
+.input-wrapper.disabled input {
+  background-color: #f1f5f9;
+  color: #64748b;
+  border-color: transparent;
+  cursor: not-allowed;
+}
+
+.input-icon {
+  position: absolute;
+  right: 12px;
+  color: var(--vibrant-blue);
+  display: flex;
+  pointer-events: none;
+}
+
+/* --- TABLA DE DENUNCIAS --- */
+.table-container {
+  overflow-x: auto;
+  /* El borde y shadow ya lo da el contenedor padre en Profile.jsx, 
+     pero si la usas sola: border-radius: 8px; */
+}
+
+.custom-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.custom-table th {
+  background-color: transparent;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  border-bottom: 2px solid var(--light-gray);
+  padding: 0 16px 16px 16px;
+  text-align: left;
+}
+
+.custom-table td {
+  padding: 20px 16px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--deep-blue);
+  border-bottom: 1px solid var(--light-gray);
+  vertical-align: middle;
+}
+
+.custom-table tr:hover td {
+  background-color: #f8fbff; /* Hover azul muy sutil en la fila */
+}
+
+.custom-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* --- ANIMACIONES GLOBALES --- */
+@keyframes scaleUp {
+  from { opacity: 0; transform: scale(0.9) translateY(-10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Estilos específicos para el dropdown de notificaciones si fuera necesario ajustarlos */
+.notifications-dropdown {
+  /* ... (estilos ya definidos en el componente JSX, pero aquí puedes sobrescribir) ... */
+}
+
+/* Añadir al final de src/App.css */
+
+.btn-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Asegurar que el svg dentro del botón tenga el tamaño correcto si no se pasa explícito */
+.btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* --- ANIMACIONES MODAL --- */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleUp {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
