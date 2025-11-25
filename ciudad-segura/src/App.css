@@ -250,12 +250,6 @@ h1, h2, h3 { letter-spacing: -0.02em; color: var(--deep-blue); }
   to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
-/* Estilos específicos para el dropdown de notificaciones si fuera necesario ajustarlos */
-.notifications-dropdown {
-  /* ... (estilos ya definidos en el componente JSX, pero aquí puedes sobrescribir) ... */
-}
-
-/* Añadir al final de src/App.css */
 
 .btn-icon {
   display: flex;
