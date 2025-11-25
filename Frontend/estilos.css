@@ -92,14 +92,14 @@ a {
 
 /* ===== Sección Principal ===== */
 .seccion-heroe {
-    margin-top: 30px; 
+    margin-top: 30px;  /* Espacio superior*/
     background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('https://cdn.pixabay.com/photo/2020/11/10/17/36/cusco-5730516_960_720.jpg');
-    background-size: cover;
-    background-position: center;
-    border-radius: 15px;
-    padding: 100px 40px;
-    text-align: center;
-    color: white;
+    background-size: cover; /* Ajusta la imagen para cubrir todo el contenedor */
+    background-position: center; /* Centra la imagen */
+    border-radius: 15px; /* Bordes redondeados */
+    padding: 100px 40px; /* Espaciado interno */
+    text-align: center; /* Centra el texto */
+    color: white; /* Color del texto */
 }
 
 .contenido-heroe h1 {
