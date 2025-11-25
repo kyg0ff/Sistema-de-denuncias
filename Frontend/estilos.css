@@ -90,7 +90,7 @@ a {
 }
 
 
-/* ===== Sección Principal (Héroe) ===== */
+/* ===== Sección Principal ===== */
 .seccion-heroe {
     margin-top: 30px; 
     background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('https://cdn.pixabay.com/photo/2020/11/10/17/36/cusco-5730516_960_720.jpg');
