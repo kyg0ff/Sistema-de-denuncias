@@ -1,0 +1,118 @@
+.form-page {
+    background-color: #f1f5f9;
+    min-height: calc(100vh - 70px);
+    padding: 40px 20px;
+    display: flex;
+    justify-content: center;
+}
+
+.form-container {
+    background-color: white;
+    width: 100%;
+    max-width: 800px;
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: var(--shadow-md);
+}
+
+.form-header {
+    margin-bottom: 30px;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 20px;
+}
+
+.form-title {
+    font-size: 1.8rem;
+    color: var(--secondary-color);
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.form-subtitle {
+    color: var(--text-color);
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--secondary-color);
+}
+
+.form-control {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.3s;
+    background-color: #f8fafc;
+}
+
+.form-control:focus {
+    border-color: var(--primary-color);
+    background-color: white;
+}
+
+textarea.form-control {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.form-row {
+    display: flex;
+    gap: 20px;
+}
+
+.col {
+    flex: 1;
+}
+
+/* Estilo para el input de archivo */
+.file-upload-wrapper {
+    border: 2px dashed #cbd5e1;
+    padding: 20px;
+    text-align: center;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.file-upload-wrapper:hover {
+    background-color: #f0fdfa;
+    border-color: var(--primary-color);
+}
+
+.btn-group {
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+    margin-top: 30px;
+}
+
+.btn-cancel {
+    background-color: #e2e8f0;
+    color: var(--secondary-color);
+}
+
+.btn-submit {
+    background-color: #2563eb; /* Azul fuerte como tu diseño */
+    color: white;
+    padding: 12px 30px;
+}
+
+.preview-img {
+    width: 100%;
+    max-height: 200px;
+    object-fit: contain;
+    margin-top: 10px;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+}
