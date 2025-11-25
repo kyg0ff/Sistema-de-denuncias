@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Denuncias</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Panel de Búsqueda -->
+        <div class="panel">
+            <div class="header">
+                <button class="back-btn">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <h2>Buscar Denuncias</h2>
+            </div>
+            <div class="content">
+                <div class="form-group">
+                    <label>Filtros</label>
+                    <input type="text" placeholder="Número de Denuncia">
+                </div>
+
+                <div class="form-group">
+                    <label>Búsqueda de la categoría denunciada</label>
+                    <input type="text" placeholder="Buscar categoría">
+                </div>
+
+                <div class="form-group">
+                    <label>Categoría</label>
+                    <select>
+                        <option>Selecciona una categoría</option>
+                        <option>Vías y Rutas</option>
+                        <option>Limpieza Pública</option>
+                        <option>Alumbrado Ciudadano</option>
+                        <option>Propiedad y Sembríos</option>
+                    </select>
+                </div>
+
+                <div class="filter-row">
+                    <div class="form-group">
+                        <label>Distrito</label>
+                        <select>
+                            <option>Seleccionar un distrito</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Provincia</label>
+                        <select>
+                            <option>Seleccionar una provincia</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Estado de Denuncia</label>
+                    <select>
+                        <option>Selecciona</option>
+                    </select>
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn btn-primary">Buscar</button>
+                    <button class="btn btn-secondary">Limpiar Filtros</button>
+                </div>
+
+                <div id="map"></div>
+
+                <h3 style="margin-bottom: 12px; font-size: 16px;">Resultados</h3>
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th>Número</th>
+                            <th>Categoría</th>
+                            <th>Distrito</th>
+                            <th>Fecha</th>
+                            <th>Estado</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>#12345</td>
+                            <td>Alumbrado Público</td>
+                            <td>San Isidro</td>
+                            <td>04/11/2024</td>
+                            <td><span class="status-badge status-open">Pendiente</span></td>
+                            <td><i class="fas fa-eye" style="color: #17a2b8; cursor: pointer;"></i></td>
+                        </tr>
+                        <tr>
+                            <td>#12346</td>
+                            <td>Vías y Rutas</td>
+                            <td>Miraflores</td>
+                            <td>04/11/2024</td>
+                            <td><span class="status-badge status-open">En Proceso</span></td>
+                            <td><i class="fas fa-eye" style="color: #17a2b8; cursor: pointer;"></i></td>
+                        </tr>
+                        <tr>
+                            <td>#12347</td>
+                            <td>Propiedad y Sembríos</td>
+                            <td>Barranco</td>
+                            <td>04/07/2024</td>
+                            <td><span class="status-badge status-open">Atendido</span></td>
+                            <td><i class="fas fa-eye" style="color: #17a2b8; cursor: pointer;"></i></td>
+                        </tr>
+                        <tr>
+                            <td>#44056</td>
+                            <td>Limpieza Pública</td>
+                            <td>Surco</td>
+                            <td>01/07/2024</td>
+                            <td><span class="status-badge status-open">Cerrado</span></td>
+                            <td><i class="fas fa-eye" style="color: #17a2b8; cursor: pointer;"></i></td>
+                        </tr>
+                        <tr>
+                            <td>#71648</td>
+                            <td>Alumbrado Ciudadano</td>
+                            <td>La Molina</td>
+                            <td>28/06/2024</td>
+                            <td><span class="status-badge status-open">Pendiente</span></td>
+                            <td><i class="fas fa-eye" style="color: #17a2b8; cursor: pointer;"></i></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Panel de Reporte -->
+        <div class="panel">
+            <div class="header-report">
+                <div class="title">
+                    <button class="back-btn">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <h2>Reporte de Detalles</h2>
+                </div>
+                <div class="header-icons">
+                    <button class="icon-btn">
+                        <i class="fas fa-check"></i>
+                    </button>
+                    <button class="icon-btn">
+                        <i class="fas fa-user"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="content">
+                <div class="info-section">
+                    <h3>Estado de la denuncia</h3>
+                    <p>En proceso</p>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar"></div>
+                    </div>
+                </div>
+
+                <div class="info-section">
+                    <h3>Categoría</h3>
+                    <p>Baches en la pista</p>
+                </div>
+
+                <div class="info-section">
+                    <h3>Ubicación</h3>
+                    <p>Santiago</p>
+                </div>
+
+                <div class="info-section">
+                    <h3>Descripción</h3>
+                    <p>Se identificó un...</p>
+                </div>
+
+                <div class="info-section">
+                    <h3>Imagen</h3>
+                    <img src="https://images.unsplash.com/photo-1591293835940-c7e5703c539b?w=800&h=600&fit=crop" alt="Bache en la calle" class="report-image">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
