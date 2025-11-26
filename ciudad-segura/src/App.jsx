@@ -13,12 +13,13 @@ import LoginModal from './pages/LoginModal';
 import RegisterPage from './pages/Register';
 import CreateReport from './pages/CreateReport';
 import ComplaintDetails from './pages/ComplaintDetails';
+import AdminDashboard from './pages/AdminDashboard'; // Panel de Administrador
 
 import './App.css';
 
 function App() {
-  // --- ESTADOS GLOBALES DE DATOS ---
-  const [user, setUser] = useState(null); // Usuario logueado (null = invitado)
+  // --- ESTADOS GLOBALES ---
+  const [user, setUser] = useState(null); // Usuario logueado
   const [currentPage, setCurrentPage] = useState('home'); // Control de navegación
   const [selectedComplaintId, setSelectedComplaintId] = useState(null); // ID para ver detalles
   
@@ -39,8 +40,15 @@ function App() {
 
   // --- MANEJADORES DE SESIÓN ---
   const handleLogin = (userdata) => {
-    setUser({ name: userdata.email }); // En un caso real, usarías el nombre real
-    setCurrentPage('home');
+    // 1. Lógica de ADMINISTRADOR
+    if (userdata.email === 'admin' && userdata.password === '123456') {
+      setUser({ name: 'Administrador', role: 'admin' });
+      setCurrentPage('admin-dashboard'); // Redirigir al panel admin
+    } else {
+      // 2. Lógica de USUARIO CIUDADANO
+      setUser({ name: userdata.email, role: 'user' }); // En producción usaríamos nombre real
+      setCurrentPage('home');
+    }
   };
   
   const handleLogout = () => {
@@ -50,49 +58,45 @@ function App() {
     setShowLogoutModal(true); // Confirmación visual
   };
 
+  const closeModal = () => setShowLogoutModal(false);
+
   // --- SISTEMA DE NAVEGACIÓN ---
-  
-  // 1. Ir al Registro
   const onNavigateToRegister = () => {
     setCurrentPage('register');
     window.scrollTo(0, 0);
   };
   
-  // 2. Abrir Login (desde header o registro)
   const goToLogin = () => {
     setShowLoginModal(true);
     if (currentPage === 'register') setCurrentPage("home");
   };
 
-  // 3. Volver al Inicio
   const handleBackToHome = () => {
     setCurrentPage('home');
     window.scrollTo(0, 0);
   };
 
-  // 4. Ir a "Sobre Nosotros"
   const handleNavigateToAbout = () => {
     setCurrentPage('about');
     window.scrollTo(0, 0);
   };
 
-  // 5. Ir a "Crear Reporte" (Desde el Hero)
   const handleNavigateToCreateReport = () => {
     setCurrentPage('create-report');
     window.scrollTo(0, 0);
   };
 
-  // 6. Ir a "Detalles de Denuncia" (Desde Home, Perfil o éxito de crear reporte)
+  // Navegación a Detalles (desde Home, Perfil o Crear Reporte)
   const handleViewDetails = (id) => {
-    setSelectedComplaintId(id); // Guardamos el ID (o código)
+    setSelectedComplaintId(id);
     setCurrentPage('complaint-details');
     window.scrollTo(0, 0);
   };
 
-  // 7. Ir a "Notificaciones" (Bandeja completa)
+  // Navegación a Notificaciones (desde Header)
   const handleViewAllNotifications = () => {
     setCurrentPage('notifications');
-    setShowNotifications(false); // Cerramos el dropdown
+    setShowNotifications(false);
     window.scrollTo(0, 0);
   };
 
@@ -104,7 +108,6 @@ function App() {
 
   const handleOpenContact = () => setShowContactModal(true);
   const handleCloseContact = () => setShowContactModal(false);
-  const closeModal = () => setShowLogoutModal(false);
 
   const handleMarkAsRead = (idx) => {
     const updated = [...notifications];
@@ -112,7 +115,7 @@ function App() {
     setNotifications(updated);
   };
 
-  // Efecto: Cerrar dropdown al hacer click fuera
+  // Cerrar dropdown al hacer click fuera
   useEffect(() => {
     const handleClickOutside = () => {
       if (showNotifications) setShowNotifications(false);
@@ -124,106 +127,105 @@ function App() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       
-      {/* HEADER SUPERIOR */}
-      <Header 
-        user={user} 
-        onLogin={() => setShowLoginModal(true)}
-        onNavigateToProfile={() => setCurrentPage('profile')}
-        onNavigateToRegister={onNavigateToRegister}
-        onNavigateToHome={handleBackToHome}
-        notifications={notifications}
-        showNotifications={showNotifications}
-        toggleNotifications={toggleNotifications}
-        onViewAllNotifications={handleViewAllNotifications} 
-      />
+      {/* RENDERIZADO CONDICIONAL: ADMIN VS USUARIO */}
       
-      {/* --- MODALES GLOBALES --- */}
-      
-      {/* Modal Logout */}
-      <Modal 
-        isOpen={showLogoutModal} 
-        onClose={closeModal} 
-        title="¡Hasta pronto!" 
-        message="Has cerrado sesión correctamente. Gracias por contribuir a mejorar tu ciudad." 
-      />
-
-      {/* Modal Contacto */}
-      <ContactModal 
-        isOpen={showContactModal} 
-        onClose={handleCloseContact} 
-      />
-      
-      {/* Modal Login */}
-      <LoginModal
-        isOpen={showLoginModal}
-        onClose={() => setShowLoginModal(false)}
-        onLogin={(username, pass) => {
-          handleLogin({ email: username });
-          setShowLoginModal(false);
-        }}
-      />
-
-      {/* --- CONTENIDO PRINCIPAL (ROUTER) --- */}
-      <div style={{ flex: 1 }}>
-        
-        {currentPage === 'register' && (
-          <RegisterPage 
-            onGoLogin={goToLogin} 
-            onBack={handleBackToHome} 
+      {currentPage === 'admin-dashboard' ? (
+        // VISTA DE ADMINISTRADOR (Sin Header/Footer normales)
+        <AdminDashboard onLogout={handleLogout} />
+      ) : (
+        // VISTA DE CIUDADANO (Con navegación normal)
+        <>
+          <Header 
+            user={user} 
+            onLogin={() => setShowLoginModal(true)}
+            onNavigateToProfile={() => setCurrentPage('profile')}
+            onNavigateToRegister={onNavigateToRegister}
+            onNavigateToHome={handleBackToHome}
+            notifications={notifications}
+            showNotifications={showNotifications}
+            toggleNotifications={toggleNotifications}
+            onViewAllNotifications={handleViewAllNotifications} 
           />
-        )}
+          
+          {/* --- MODALES --- */}
+          <Modal 
+            isOpen={showLogoutModal} 
+            onClose={closeModal} 
+            title="¡Hasta pronto!" 
+            message="Has cerrado sesión correctamente." 
+          />
 
-        {currentPage === 'home' && (
-          <Home 
-            onCreateReport={handleNavigateToCreateReport} 
-            onViewDetails={handleViewDetails} 
+          <ContactModal 
+            isOpen={showContactModal} 
+            onClose={handleCloseContact} 
           />
-        )}
-        
-        {currentPage === 'profile' && (
-          <Profile 
-            onLogout={handleLogout} 
-            onBack={handleBackToHome}
-            onViewDetails={handleViewDetails} // <--- AQUÍ CONECTAMOS LA TABLA DEL PERFIL
+          
+          <LoginModal
+            isOpen={showLoginModal}
+            onClose={() => setShowLoginModal(false)}
+            onLogin={(username, pass) => {
+              handleLogin({ email: username, password: pass }); // Pasamos pass para validar admin
+              setShowLoginModal(false);
+            }}
           />
-        )}
-        
-        {currentPage === 'notifications' && (
-          <Notifications 
-            notifications={notifications} 
-            onMarkAsRead={handleMarkAsRead} 
-            onBack={handleBackToHome} 
-          />
-        )}
 
-        {currentPage === 'about' && (
-          <About 
-            onBack={handleBackToHome} 
-          />
-        )}
+          {/* --- CONTENIDO PRINCIPAL --- */}
+          <div style={{ flex: 1 }}>
+            
+            {currentPage === 'register' && (
+              <RegisterPage onGoLogin={goToLogin} onBack={handleBackToHome} />
+            )}
 
-        {currentPage === 'create-report' && (
-          <CreateReport 
-            onBack={handleBackToHome} 
-            onSubmitSuccess={handleBackToHome} // Acción por defecto "Salir"
-            onViewDetails={handleViewDetails}  // Acción para el botón "Ver Detalles"
-          />
-        )}
+            {currentPage === 'home' && (
+              <Home 
+                onCreateReport={handleNavigateToCreateReport} 
+                onViewDetails={handleViewDetails} 
+              />
+            )}
+            
+            {currentPage === 'profile' && (
+              <Profile 
+                onLogout={handleLogout} 
+                onBack={handleBackToHome}
+                onViewDetails={handleViewDetails} 
+              />
+            )}
+            
+            {currentPage === 'notifications' && (
+              <Notifications 
+                notifications={notifications} 
+                onMarkAsRead={handleMarkAsRead} 
+                onBack={handleBackToHome} 
+              />
+            )}
 
-        {currentPage === 'complaint-details' && (
-          <ComplaintDetails 
-            complaintId={selectedComplaintId} 
-            onBack={handleBackToHome} 
-          />
-        )}
+            {currentPage === 'about' && (
+              <About onBack={handleBackToHome} />
+            )}
 
-      </div>
-      
-      {/* FOOTER INFERIOR */}
-      <Footer 
-        onNavigateToAbout={handleNavigateToAbout} 
-        onOpenContact={handleOpenContact} 
-      />
+            {currentPage === 'create-report' && (
+              <CreateReport 
+                onBack={handleBackToHome} 
+                onSubmitSuccess={handleBackToHome} 
+                onViewDetails={handleViewDetails} 
+              />
+            )}
+
+            {currentPage === 'complaint-details' && (
+              <ComplaintDetails 
+                complaintId={selectedComplaintId} 
+                onBack={handleBackToHome} 
+              />
+            )}
+
+          </div>
+          
+          <Footer 
+            onNavigateToAbout={handleNavigateToAbout} 
+            onOpenContact={handleOpenContact} 
+          />
+        </>
+      )}
       
     </div>
   );

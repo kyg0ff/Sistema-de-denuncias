@@ -280,3 +280,203 @@ h1, h2, h3 { letter-spacing: -0.02em; color: var(--deep-blue); }
   background-color: #e0f2fe !important;
   border-color: var(--deep-blue) !important;
 }
+
+
+/* --- ESTILOS PANEL ADMINISTRADOR --- */
+/* --- ESTILOS DEL ADMIN DASHBOARD --- */
+
+/* Tabla Admin */
+.admin-table th {
+  text-align: left;
+  padding: 16px 24px;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border);
+  background-color: #f8fafc;
+}
+
+.admin-table td {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.admin-table tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-table tr:hover td {
+  background-color: #f8fbff;
+}
+
+/* Botones de Acción en Tabla */
+.action-btn {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 6px;
+  transition: 0.2s;
+  margin-left: 8px;
+}
+
+.action-btn.edit {
+  color: var(--medium-blue);
+  background-color: #e0f2fe;
+}
+.action-btn.edit:hover {
+  background-color: #bae6fd;
+}
+
+.action-btn.delete {
+  color: #ef4444;
+  background-color: #fee2e2;
+}
+.action-btn.delete:hover {
+  background-color: #fecaca;
+}
+
+/* Sidebar Items */
+.admin-nav-item {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  padding: 12px 16px;
+  width: 100%;
+  text-align: left;
+  border-radius: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.admin-nav-item:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: white;
+}
+
+.admin-nav-item.active {
+  background-color: var(--vibrant-blue); /* Azul resaltado */
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.logout-btn-admin:hover {
+  background-color: rgba(239, 68, 68, 0.15) !important;
+  color: #f87171 !important;
+}
+
+
+/* --- ESTILOS MODALES ADMIN --- */
+
+.admin-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: rgba(14, 42, 59, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.admin-modal-content {
+  background: white;
+  padding: 32px;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 450px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  animation: scaleUp 0.2s ease-out;
+}
+
+.admin-modal-content h3 {
+  margin: 0 0 24px 0;
+  color: var(--deep-blue);
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.admin-input-group {
+  margin-bottom: 20px;
+}
+
+.admin-input-group label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.admin-input-group input,
+.admin-input-group select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: var(--font);
+  color: var(--deep-blue);
+  outline: none;
+  background-color: #fcfdfe;
+  transition: 0.2s;
+}
+
+.admin-input-group input:focus,
+.admin-input-group select:focus {
+  border-color: var(--vibrant-blue);
+  background-color: white;
+  box-shadow: 0 0 0 3px rgba(41, 157, 201, 0.15);
+}
+
+.admin-modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 32px;
+  border-top: 1px solid var(--border);
+  padding-top: 20px;
+}
+
+.cancel-btn {
+  padding: 10px 20px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.save-btn {
+  padding: 10px 24px;
+  background: var(--deep-blue);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.delete-btn-confirm {
+  padding: 10px 24px;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
