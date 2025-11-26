@@ -21,7 +21,8 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-export default function ComplaintTable({ data }) {
+// Recibimos 'onViewDetails'
+export default function ComplaintTable({ data, onViewDetails }) {
   return (
     <div className="table-container">
       <table className="custom-table">
@@ -32,25 +33,30 @@ export default function ComplaintTable({ data }) {
             <th>Hora</th>
             <th>Categoría</th>
             <th>Estado</th>
-            <th style={{ textAlign: 'right' }}>Acciones</th>
+            {/* Eliminada columna de Acciones */}
           </tr>
         </thead>
         <tbody>
           {data.map((row) => (
-            <tr key={row.id}>
-              <td style={{ fontWeight: 700, color: 'var(--deep-blue)' }}>{row.id}</td>
+            <tr key={row.id} className="hover-row">
+              <td>
+                {/* El ID ahora es un botón/enlace */}
+                <button 
+                  onClick={() => onViewDetails(row.id)}
+                  style={{ 
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    fontWeight: 700, color: 'var(--vibrant-blue)', 
+                    textDecoration: 'underline', textUnderlineOffset: '4px',
+                    fontSize: '0.95rem'
+                  }}
+                >
+                  {row.id}
+                </button>
+              </td>
               <td style={{ color: 'var(--text-muted)' }}>{row.date}</td>
               <td style={{ color: 'var(--text-muted)' }}>{row.time}</td>
               <td>{row.category}</td>
               <td><StatusBadge status={row.status} /></td>
-              <td style={{ textAlign: 'right' }}>
-                <a href={`#`} style={{ 
-                  color: 'var(--medium-blue)', fontWeight: '700', textDecoration: 'none',
-                  borderBottom: '1px solid transparent', transition: '0.2s'
-                }}>
-                  Detalles &rarr;
-                </a>
-              </td>
             </tr>
           ))}
         </tbody>

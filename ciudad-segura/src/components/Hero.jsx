@@ -1,14 +1,14 @@
 import React from 'react';
 import Button from './Button';
 
-export default function Hero() {
+// Recibimos la función onCreateReport como prop
+export default function Hero({ onCreateReport }) {
   return (
     <div style={{ 
       borderRadius: '24px', overflow: 'hidden', minHeight: '500px', 
       position: 'relative', display: 'flex', alignItems: 'center', padding: '64px',
       marginTop: '32px',
-      /* CAMBIO: Eliminado la sombra externa del Hero */
-      // boxShadow: 'var(--shadow-lg)', 
+      /* Mantenemos tu imagen de Cusco */
       backgroundImage: 'url("https://cdn.pixabay.com/photo/2020/11/10/17/36/cusco-5730516_960_720.jpg")',
       backgroundSize: 'cover', backgroundPosition: 'center', color: 'white' 
     }}>
@@ -23,9 +23,15 @@ export default function Hero() {
           Conecta con tu ayuntamiento y vecinos para resolver incidencias urbanas. Rápido, transparente y efectivo.
         </p>
         <div className="flex-row">
-          <Button variant="primary" style={{ height: '52px', padding: '0 32px', fontSize: '16px' }}>
+          {/* BOTÓN REPORTAR CONECTADO */}
+          <Button 
+            onClick={onCreateReport} 
+            variant="primary" 
+            style={{ height: '52px', padding: '0 32px', fontSize: '16px' }}
+          >
             Reportar denuncia
           </Button>
+          
           <Button style={{ 
             backgroundColor: 'var(--vibrant-blue)', color: 'white',
             height: '52px', padding: '0 32px', fontSize: '16px' 

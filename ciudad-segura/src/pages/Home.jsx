@@ -3,39 +3,18 @@ import Hero from '../components/Hero';
 import ComplaintCard from '../components/ComplaintCard';
 import Stats from '../components/Stats';
 
-export default function Home() {
+// Recibimos 'onViewDetails'
+export default function Home({ onCreateReport, onViewDetails }) {
   const data = [
-    { 
-      id: 1, 
-      category: 'Parques y Jardines', 
-      title: 'Mobiliario infantil dañado en Parque Norte', 
-      status: 'En Progreso', 
-      location: 'Parque de la Alameda', 
-      img: 'https://www.auto-tecnica.es/wp-content/uploads/2022/08/barrio-de-torrero-la-paz-1080x630.jpeg' 
-    },
-    { 
-      id: 2, 
-      category: 'Alumbrado Público', 
-      title: 'Farolas fundidas en cruce peatonal', 
-      status: 'En Progreso', 
-      location: 'Av. Constitución', 
-      img: 'https://www.auto-tecnica.es/wp-content/uploads/2022/08/barrio-de-torrero-la-paz-1080x630.jpeg' 
-    },
-    { 
-      id: 3, 
-      category: 'Vía Pública', 
-      title: 'Bache profundo peligroso para motos', 
-      status: 'Resuelta', 
-      location: 'Calle Mayor, 45', 
-      img: 'https://www.auto-tecnica.es/wp-content/uploads/2022/08/barrio-de-torrero-la-paz-1080x630.jpeg'
-    }
+    { id: 1, category: 'Parques y Jardines', title: 'Mobiliario infantil dañado en Parque Norte', status: 'Urgente', location: 'Parque de la Alameda', img: 'https://www.auto-tecnica.es/wp-content/uploads/2022/08/barrio-de-torrero-la-paz-1080x630.jpeg' },
+    { id: 2, category: 'Alumbrado Público', title: 'Farolas fundidas en cruce peatonal', status: 'En Progreso', location: 'Av. Constitución', img: 'https://www.auto-tecnica.es/wp-content/uploads/2022/08/barrio-de-torrero-la-paz-1080x630.jpeg' },
+    { id: 3, category: 'Vía Pública', title: 'Bache profundo peligroso para motos', status: 'Resuelta', location: 'Calle Mayor, 45', img: 'https://www.auto-tecnica.es/wp-content/uploads/2022/08/barrio-de-torrero-la-paz-1080x630.jpeg' }
   ];
 
   return (
     <main>
-      {/* CAMBIO: Hero ahora está dentro de un contenedor */}
       <div className="container">
-        <Hero />
+        <Hero onCreateReport={onCreateReport} />
       </div>
 
       <section className="container" style={{ marginTop: '80px', marginBottom: '20px' }}>
@@ -46,7 +25,12 @@ export default function Home() {
         
         <div className="cards-grid">
           {data.map(item => (
-            <ComplaintCard key={item.id} item={item} />
+            // Pasamos la función al hacer click
+            <ComplaintCard 
+              key={item.id} 
+              item={item} 
+              onClick={() => onViewDetails(item.id)} 
+            />
           ))}
         </div>
       </section>
@@ -57,3 +41,4 @@ export default function Home() {
     </main>
   );
 }
+

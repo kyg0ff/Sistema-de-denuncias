@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import Modal from './components/Modal';
-import ContactModal from './components/ContactModal'; // Importamos el Modal de Contacto
+import ContactModal from './components/ContactModal';
 
 // Importación de Páginas
 import Home from './pages/Home';
@@ -11,20 +11,22 @@ import Notifications from './pages/Notifications';
 import About from './pages/About';
 import LoginModal from './pages/LoginModal';
 import RegisterPage from './pages/Register';
+import CreateReport from './pages/CreateReport';
+import ComplaintDetails from './pages/ComplaintDetails';
+
 import './App.css';
 
-
-
 function App() {
-  // --- ESTADOS GLOBALES ---
-  const [user, setUser] = useState(null); // Estado del usuario (null = no logueado)
-  const [currentPage, setCurrentPage] = useState('home'); // Navegación: 'home', 'profile', 'notifications', 'about'
+  // --- ESTADOS GLOBALES DE DATOS ---
+  const [user, setUser] = useState(null); // Usuario logueado (null = invitado)
+  const [currentPage, setCurrentPage] = useState('home'); // Control de navegación
+  const [selectedComplaintId, setSelectedComplaintId] = useState(null); // ID para ver detalles
   
-  // Estados de UI (Modales y Dropdowns)
+  // --- ESTADOS DE INTERFAZ (UI) ---
   const [showNotifications, setShowNotifications] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [showContactModal, setShowContactModal] = useState(false); // Estado para el modal de contacto
-  const [showLoginModal, setShowLoginModal] = useState(false); // Estado para el modal de login
+  const [showContactModal, setShowContactModal] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   // Datos simulados de notificaciones
   const [notifications, setNotifications] = useState([
@@ -37,7 +39,7 @@ function App() {
 
   // --- MANEJADORES DE SESIÓN ---
   const handleLogin = (userdata) => {
-    setUser({ name: userdata.email });
+    setUser({ name: userdata.email }); // En un caso real, usarías el nombre real
     setCurrentPage('home');
   };
   
@@ -45,54 +47,72 @@ function App() {
     setUser(null);
     setCurrentPage('home');
     setShowNotifications(false);
-    setShowLogoutModal(true); // Muestra confirmación de salida
+    setShowLogoutModal(true); // Confirmación visual
   };
 
-  const closeModal = () => {
-    setShowLogoutModal(false);
-  };
-  // --- NAVEGACIÓN A REGISTRO ---
+  // --- SISTEMA DE NAVEGACIÓN ---
+  
+  // 1. Ir al Registro
   const onNavigateToRegister = () => {
     setCurrentPage('register');
+    window.scrollTo(0, 0);
   };
+  
+  // 2. Abrir Login (desde header o registro)
   const goToLogin = () => {
-    setShowLoginModal(true);  // abre el modal de login
-    setCurrentPage("home");   // vuelve a home
-  };
-  const handleNavigateToAbout = () => {
-    setCurrentPage('about');
-    window.scrollTo(0, 0); // Scroll arriba al cambiar de página
+    setShowLoginModal(true);
+    if (currentPage === 'register') setCurrentPage("home");
   };
 
+  // 3. Volver al Inicio
   const handleBackToHome = () => {
     setCurrentPage('home');
     window.scrollTo(0, 0);
   };
 
-  // --- MANEJADORES DE NAVEGACIÓN Y UI ---
+  // 4. Ir a "Sobre Nosotros"
+  const handleNavigateToAbout = () => {
+    setCurrentPage('about');
+    window.scrollTo(0, 0);
+  };
+
+  // 5. Ir a "Crear Reporte" (Desde el Hero)
+  const handleNavigateToCreateReport = () => {
+    setCurrentPage('create-report');
+    window.scrollTo(0, 0);
+  };
+
+  // 6. Ir a "Detalles de Denuncia" (Desde Home, Perfil o éxito de crear reporte)
+  const handleViewDetails = (id) => {
+    setSelectedComplaintId(id); // Guardamos el ID (o código)
+    setCurrentPage('complaint-details');
+    window.scrollTo(0, 0);
+  };
+
+  // 7. Ir a "Notificaciones" (Bandeja completa)
+  const handleViewAllNotifications = () => {
+    setCurrentPage('notifications');
+    setShowNotifications(false); // Cerramos el dropdown
+    window.scrollTo(0, 0);
+  };
+
+  // --- MANEJADORES DE UI ---
   const toggleNotifications = (e) => {
     if (e && e.stopPropagation) e.stopPropagation();
     setShowNotifications(prev => !prev);
   };
 
-  const handleViewAllNotifications = () => {
-    setCurrentPage('notifications');
-    setShowNotifications(false);
-  };
-
-  // Manejadores para el Modal de Contacto
   const handleOpenContact = () => setShowContactModal(true);
   const handleCloseContact = () => setShowContactModal(false);
+  const closeModal = () => setShowLogoutModal(false);
 
-  // --- LÓGICA DE DATOS ---
   const handleMarkAsRead = (idx) => {
     const updated = [...notifications];
-    // Nota: En producción usaríamos ID, aquí usamos índice para demo visual
     if(updated[idx]) updated[idx].read = true; 
     setNotifications(updated);
   };
 
-  // Efecto: Cerrar dropdown de notificaciones al hacer click fuera
+  // Efecto: Cerrar dropdown al hacer click fuera
   useEffect(() => {
     const handleClickOutside = () => {
       if (showNotifications) setShowNotifications(false);
@@ -104,10 +124,10 @@ function App() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       
-      {/* 1. HEADER (Navegación Superior) */}
+      {/* HEADER SUPERIOR */}
       <Header 
-        onLogin={() => setShowLoginModal(true)}   // abrir modal login
         user={user} 
+        onLogin={() => setShowLoginModal(true)}
         onNavigateToProfile={() => setCurrentPage('profile')}
         onNavigateToRegister={onNavigateToRegister}
         onNavigateToHome={handleBackToHome}
@@ -117,9 +137,9 @@ function App() {
         onViewAllNotifications={handleViewAllNotifications} 
       />
       
-      {/* 2. MODALES GLOBALES */}
+      {/* --- MODALES GLOBALES --- */}
       
-      {/* Modal de Confirmación de Logout */}
+      {/* Modal Logout */}
       <Modal 
         isOpen={showLogoutModal} 
         onClose={closeModal} 
@@ -127,12 +147,13 @@ function App() {
         message="Has cerrado sesión correctamente. Gracias por contribuir a mejorar tu ciudad." 
       />
 
-      {/* Modal de Contacto (Desarrolladores) */}
+      {/* Modal Contacto */}
       <ContactModal 
         isOpen={showContactModal} 
         onClose={handleCloseContact} 
       />
-      {/* Modal de Login */}
+      
+      {/* Modal Login */}
       <LoginModal
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
@@ -142,24 +163,28 @@ function App() {
         }}
       />
 
-      {/* 3. CONTENIDO PRINCIPAL (Router Casero) */}
+      {/* --- CONTENIDO PRINCIPAL (ROUTER) --- */}
       <div style={{ flex: 1 }}>
+        
         {currentPage === 'register' && (
-          <RegisterPage
-            onGoLogin={goToLogin}
-            onBack={handleBackToHome}
+          <RegisterPage 
+            onGoLogin={goToLogin} 
+            onBack={handleBackToHome} 
           />
         )}
 
-        
         {currentPage === 'home' && (
-          <Home />
+          <Home 
+            onCreateReport={handleNavigateToCreateReport} 
+            onViewDetails={handleViewDetails} 
+          />
         )}
         
         {currentPage === 'profile' && (
           <Profile 
             onLogout={handleLogout} 
-            onBack={handleBackToHome} 
+            onBack={handleBackToHome}
+            onViewDetails={handleViewDetails} // <--- AQUÍ CONECTAMOS LA TABLA DEL PERFIL
           />
         )}
         
@@ -177,9 +202,24 @@ function App() {
           />
         )}
 
+        {currentPage === 'create-report' && (
+          <CreateReport 
+            onBack={handleBackToHome} 
+            onSubmitSuccess={handleBackToHome} // Acción por defecto "Salir"
+            onViewDetails={handleViewDetails}  // Acción para el botón "Ver Detalles"
+          />
+        )}
+
+        {currentPage === 'complaint-details' && (
+          <ComplaintDetails 
+            complaintId={selectedComplaintId} 
+            onBack={handleBackToHome} 
+          />
+        )}
+
       </div>
       
-      {/* 4. FOOTER (Navegación Inferior) */}
+      {/* FOOTER INFERIOR */}
       <Footer 
         onNavigateToAbout={handleNavigateToAbout} 
         onOpenContact={handleOpenContact} 

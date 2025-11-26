@@ -274,3 +274,9 @@ h1, h2, h3 { letter-spacing: -0.02em; color: var(--deep-blue); }
   from { transform: scale(0.95); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
 }
+
+/* Añadir al final de App.css */
+.upload-area:hover {
+  background-color: #e0f2fe !important;
+  border-color: var(--deep-blue) !important;
+}
