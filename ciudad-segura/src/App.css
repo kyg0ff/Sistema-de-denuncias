@@ -149,7 +149,8 @@ h1, h2, h3 { letter-spacing: -0.02em; color: var(--deep-blue); }
 .input-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 3px;
+  margin-bottom: 15px;
 }
 
 .input-group label {

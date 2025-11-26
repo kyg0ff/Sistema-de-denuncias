@@ -9,7 +9,7 @@ export default function Hero() {
       marginTop: '32px',
       /* CAMBIO: Eliminado la sombra externa del Hero */
       // boxShadow: 'var(--shadow-lg)', 
-      backgroundImage: `url("https://cdn.pixabay.com/photo/2020/11/10/17/36/cusco-5730516_960_720.jpg")`,
+      backgroundImage: 'url("https://cdn.pixabay.com/photo/2020/11/10/17/36/cusco-5730516_960_720.jpg")',
       backgroundSize: 'cover', backgroundPosition: 'center', color: 'white' 
     }}>
       <div style={{ 

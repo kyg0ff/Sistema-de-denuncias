@@ -5,6 +5,7 @@ import NotificationsDropdown from './NotificationsDropdown';
 export default function Header({ 
   user, 
   onLogin, 
+  onNavigateToRegister,
   onNavigateToProfile, 
   onNavigateToHome, 
   notifications, 
@@ -92,7 +93,7 @@ export default function Header({
           ) : (
             <>
               <Button style={buttonStyle} onClick={onLogin}>Iniciar Sesión</Button>
-              <Button style={buttonStyle} onClick={onLogin}>Registrarse</Button>
+              <Button style={buttonStyle} onClick={onNavigateToRegister}>Registrarse</Button>
             </>
           )}
         </div>

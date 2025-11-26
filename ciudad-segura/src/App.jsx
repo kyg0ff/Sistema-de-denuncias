@@ -9,8 +9,11 @@ import Home from './pages/Home';
 import Profile from './pages/Profile';
 import Notifications from './pages/Notifications';
 import About from './pages/About';
-
+import LoginModal from './pages/LoginModal';
+import RegisterPage from './pages/Register';
 import './App.css';
+
+
 
 function App() {
   // --- ESTADOS GLOBALES ---
@@ -21,6 +24,7 @@ function App() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false); // Estado para el modal de contacto
+  const [showLoginModal, setShowLoginModal] = useState(false); // Estado para el modal de login
 
   // Datos simulados de notificaciones
   const [notifications, setNotifications] = useState([
@@ -32,11 +36,11 @@ function App() {
   ]);
 
   // --- MANEJADORES DE SESIÓN ---
-  const handleLogin = () => {
-    setUser({ name: 'Luis Fernando Gallegos' });
+  const handleLogin = (userdata) => {
+    setUser({ name: userdata.email });
     setCurrentPage('home');
   };
-
+  
   const handleLogout = () => {
     setUser(null);
     setCurrentPage('home');
@@ -46,6 +50,23 @@ function App() {
 
   const closeModal = () => {
     setShowLogoutModal(false);
+  };
+  // --- NAVEGACIÓN A REGISTRO ---
+  const onNavigateToRegister = () => {
+    setCurrentPage('register');
+  };
+  const goToLogin = () => {
+    setShowLoginModal(true);  // abre el modal de login
+    setCurrentPage("home");   // vuelve a home
+  };
+  const handleNavigateToAbout = () => {
+    setCurrentPage('about');
+    window.scrollTo(0, 0); // Scroll arriba al cambiar de página
+  };
+
+  const handleBackToHome = () => {
+    setCurrentPage('home');
+    window.scrollTo(0, 0);
   };
 
   // --- MANEJADORES DE NAVEGACIÓN Y UI ---
@@ -57,16 +78,6 @@ function App() {
   const handleViewAllNotifications = () => {
     setCurrentPage('notifications');
     setShowNotifications(false);
-  };
-
-  const handleNavigateToAbout = () => {
-    setCurrentPage('about');
-    window.scrollTo(0, 0); // Scroll arriba al cambiar de página
-  };
-
-  const handleBackToHome = () => {
-    setCurrentPage('home');
-    window.scrollTo(0, 0);
   };
 
   // Manejadores para el Modal de Contacto
@@ -95,9 +106,10 @@ function App() {
       
       {/* 1. HEADER (Navegación Superior) */}
       <Header 
+        onLogin={() => setShowLoginModal(true)}   // abrir modal login
         user={user} 
-        onLogin={handleLogin} 
         onNavigateToProfile={() => setCurrentPage('profile')}
+        onNavigateToRegister={onNavigateToRegister}
         onNavigateToHome={handleBackToHome}
         notifications={notifications}
         showNotifications={showNotifications}
@@ -120,9 +132,25 @@ function App() {
         isOpen={showContactModal} 
         onClose={handleCloseContact} 
       />
+      {/* Modal de Login */}
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onLogin={(username, pass) => {
+          handleLogin({ email: username });
+          setShowLoginModal(false);
+        }}
+      />
 
       {/* 3. CONTENIDO PRINCIPAL (Router Casero) */}
       <div style={{ flex: 1 }}>
+        {currentPage === 'register' && (
+          <RegisterPage
+            onGoLogin={goToLogin}
+            onBack={handleBackToHome}
+          />
+        )}
+
         
         {currentPage === 'home' && (
           <Home />
