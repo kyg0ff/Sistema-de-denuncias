@@ -4,7 +4,7 @@ import ComplaintCard from '../components/ComplaintCard';
 import Stats from '../components/Stats';
 
 // Recibimos 'onViewDetails'
-export default function Home({ onCreateReport, onViewDetails }) {
+export default function Home({ onCreateReport, onViewDetails, onViewAll }) {
   const data = [
     { id: 1, category: 'Parques y Jardines', title: 'Mobiliario infantil dañado en Parque Norte', status: 'Urgente', location: 'Parque de la Alameda', img: 'https://www.auto-tecnica.es/wp-content/uploads/2022/08/barrio-de-torrero-la-paz-1080x630.jpeg' },
     { id: 2, category: 'Alumbrado Público', title: 'Farolas fundidas en cruce peatonal', status: 'En Progreso', location: 'Av. Constitución', img: 'https://www.auto-tecnica.es/wp-content/uploads/2022/08/barrio-de-torrero-la-paz-1080x630.jpeg' },
@@ -14,7 +14,7 @@ export default function Home({ onCreateReport, onViewDetails }) {
   return (
     <main>
       <div className="container">
-        <Hero onCreateReport={onCreateReport} />
+        <Hero onCreateReport={onCreateReport} onViewAll={onViewAll} />
       </div>
 
       <section className="container" style={{ marginTop: '80px', marginBottom: '20px' }}>

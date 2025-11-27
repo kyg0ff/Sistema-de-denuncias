@@ -8,7 +8,12 @@ const INITIAL_USERS = [
   { id: 3, name: 'Carlos Diaz', email: 'carlos@yahoo.com', role: 'Ciudadano', status: 'Baneado' },
   { id: 4, name: 'Lucia Mendez', email: 'lucia@gmail.com', role: 'Ciudadano', status: 'Activo' },
 ];
-
+// NUEVO: Datos mock de denuncias
+const INITIAL_COMPLAINTS = [
+  { id: 'RPT-1001', title: 'Bache peligroso en Calle Sol', category: 'Vía Pública', status: 'Abierta', location: 'Calle Sol 123', assignedTo: null, reporter: 'Ana R.' },
+  { id: 'RPT-1002', title: 'Farolas apagadas en Av. Norte', category: 'Alumbrado Público', status: 'En Progreso', location: 'Av. Norte', assignedTo: 1, reporter: 'Luis M.' },
+  { id: 'RPT-1003', title: 'Vertido de residuos en parque', category: 'Ambiente', status: 'Resuelta', location: 'Parque Central', assignedTo: 4, reporter: 'Carla P.' },
+];
 const INITIAL_ORGS = [
   { id: 1, name: 'Municipalidad de Wanchaq', type: 'Gobierno Local', color: '#4f46e5' },
   { id: 2, name: 'Policía de Tránsito', type: 'Seguridad', color: '#059669' },
@@ -52,6 +57,7 @@ export default function AdminDashboard({ onLogout }) {
   const [users, setUsers] = useState(INITIAL_USERS);
   const [orgs, setOrgs] = useState(INITIAL_ORGS); // <--- CORREGIDO: Añadido setOrgs
   const [authorities, setAuthorities] = useState(INITIAL_AUTHORITIES);
+  const [complaints, setComplaints] = useState(INITIAL_COMPLAINTS); // NUEVO: Estado de denuncias
   
   const [activeTab, setActiveTab] = useState('users');
   const [selectedOrg, setSelectedOrg] = useState(null);
@@ -81,6 +87,12 @@ export default function AdminDashboard({ onLogout }) {
     setModalMode('add'); 
     setFormData({ name: '', type: 'Gobierno Local', color: '#4f46e5' }); 
   };
+  // --- HANDLERS: ABRIR MODALES ---
+  const openAddComplaint = () => { setModalType('complaint'); setModalMode('add'); setFormData({ id: '', title: '', category: 'Vía Pública', status: 'Abierta', location: '', assignedTo: null, reporter: '' }); };
+  const openEditComplaint = (c) => { setModalType('complaint'); setModalMode('edit'); setCurrentItem(c); setFormData({ ...c }); };
+  const openDeleteComplaint = (c) => { setModalType('delete'); setDeleteTarget('complaint'); setCurrentItem(c); };
+
+
 
   const closeModal = () => { setModalType(null); setFormData({}); setCurrentItem(null); };
 

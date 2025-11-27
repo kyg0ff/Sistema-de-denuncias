@@ -5,6 +5,7 @@ const LoginModal = ({ isOpen, onClose, onLogin }) => {
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(false);
   const [error, setError] = useState("");
+  const [userRole, setUserRole] = useState("citizen"); // 'citizen' o 'admin'
 
   const [navHeight, setNavHeight] = useState(0);
 
@@ -24,7 +25,7 @@ const LoginModal = ({ isOpen, onClose, onLogin }) => {
       return;
     }
     setError("");
-    onLogin(username, password, remember);
+    onLogin(username, password, remember, userRole); // Pasar el rol
   };
 
   return (
@@ -34,19 +35,13 @@ const LoginModal = ({ isOpen, onClose, onLogin }) => {
         inset: 0,
         background: "rgba(0,0,0,0.5)",
         display: "flex",
-
-        // ⭐ Modal se ubica automáticamente debajo del navbar
         justifyContent: "center",      
         alignItems: "flex-start",
-        // 🔥 Shift vertical dinámico según navbar + 20px extra
         paddingTop: `${navHeight + 60}px`,
-
-        // ⭐ Ajuste horizontal hacia la derecha
         paddingLeft: "730px",
-
         zIndex: 9999,
       }}
-      onClick={onClose} //
+      onClick={onClose}
     >
       {/* CONTENEDOR DEL MODAL */}
       <div
@@ -61,6 +56,42 @@ const LoginModal = ({ isOpen, onClose, onLogin }) => {
         onClick={(e) => e.stopPropagation()}
       >
         <h2 style={{ marginBottom: 20, textAlign: "center" }}>Iniciar Sesión</h2>
+
+        {/* SELECTOR DE ROL: Ciudadano vs Administrador */}
+        <div style={{ marginBottom: "20px", display: "flex", gap: "10px" }}>
+          <button
+            onClick={() => setUserRole("citizen")}
+            style={{
+              flex: 1,
+              padding: "10px 12px",
+              borderRadius: "8px",
+              border: userRole === "citizen" ? "2px solid #4169e1" : "1px solid #ccc",
+              background: userRole === "citizen" ? "#e8f0ff" : "#f5f5f5",
+              color: userRole === "citizen" ? "#4169e1" : "#555",
+              fontWeight: userRole === "citizen" ? "bold" : "normal",
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+            }}
+          >
+            👤 Ciudadano
+          </button>
+          <button
+            onClick={() => setUserRole("admin")}
+            style={{
+              flex: 1,
+              padding: "10px 12px",
+              borderRadius: "8px",
+              border: userRole === "admin" ? "2px solid #4169e1" : "1px solid #ccc",
+              background: userRole === "admin" ? "#e8f0ff" : "#f5f5f5",
+              color: userRole === "admin" ? "#4169e1" : "#555",
+              fontWeight: userRole === "admin" ? "bold" : "normal",
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+            }}
+          >
+            🛡️ Administrador
+          </button>
+        </div>
 
         {/* Usuario */}
         <div style={{ position: "relative", marginBottom: "15px" }}>
@@ -166,7 +197,7 @@ const LoginModal = ({ isOpen, onClose, onLogin }) => {
             fontWeight: "bold",
           }}
         >
-          Ingresar
+          {userRole === "admin" ? "Ingresar como Administrador" : "Ingresar"}
         </button>
 
         {/* Recuperación */}

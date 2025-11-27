@@ -2,7 +2,7 @@ import React from 'react';
 import Button from './Button';
 
 // Recibimos la función onCreateReport como prop
-export default function Hero({ onCreateReport }) {
+export default function Hero({ onCreateReport , onViewAll}) {
   return (
     <div style={{ 
       borderRadius: '24px', overflow: 'hidden', minHeight: '500px', 
@@ -32,7 +32,9 @@ export default function Hero({ onCreateReport }) {
             Reportar denuncia
           </Button>
           
-          <Button style={{ 
+          <Button
+            onClick={onViewAll} 
+            style={{ 
             backgroundColor: 'var(--vibrant-blue)', color: 'white',
             height: '52px', padding: '0 32px', fontSize: '16px' 
           }}>

@@ -14,6 +14,8 @@ import RegisterPage from './pages/Register';
 import CreateReport from './pages/CreateReport';
 import ComplaintDetails from './pages/ComplaintDetails';
 import AdminDashboard from './pages/AdminDashboard'; // Panel de Administrador
+import ViewAllComplaints from './pages/ViewAllComplaints';
+
 
 import './App.css';
 
@@ -22,6 +24,7 @@ function App() {
   const [user, setUser] = useState(null); // Usuario logueado
   const [currentPage, setCurrentPage] = useState('home'); // Control de navegación
   const [selectedComplaintId, setSelectedComplaintId] = useState(null); // ID para ver detalles
+  const [userRole, setUserRole] = useState('guest'); // 'guest', 'user', 'admin'
   
   // --- ESTADOS DE INTERFAZ (UI) ---
   const [showNotifications, setShowNotifications] = useState(false);
@@ -39,18 +42,25 @@ function App() {
   ]);
 
   // --- MANEJADORES DE SESIÓN ---
-  const handleLogin = (userdata) => {
+  const handleLogin = (username, password, remember, role) => {
     // 1. Lógica de ADMINISTRADOR
-    if (userdata.email === 'admin' && userdata.password === '123456') {
+    if (role === 'admin' && username === 'admin' && password === '123456') {
       setUser({ name: 'Administrador', role: 'admin' });
+      setUserRole('admin');
       setCurrentPage('admin-dashboard'); // Redirigir al panel admin
-    } else {
-      // 2. Lógica de USUARIO CIUDADANO
-      setUser({ name: userdata.email, role: 'user' }); // En producción usaríamos nombre real
+      setShowLoginModal(false);
+    } 
+    // 2. Lógica de USUARIO CIUDADANO
+    else if (role === 'citizen') {
+      setUser({ name: username, role: 'citizen' });
+      setUserRole('citizen');
       setCurrentPage('home');
-    }
+      setShowLoginModal(false);
+    } 
+    // Cerrar modal y forzar re-render del header
+    setShowLoginModal(false);
+    console.log('handleLogin -> user:', { username, role });
   };
-  
   const handleLogout = () => {
     setUser(null);
     setCurrentPage('home');
@@ -99,7 +109,11 @@ function App() {
     setShowNotifications(false);
     window.scrollTo(0, 0);
   };
-
+  // Navegación a la página "Ver todas las denuncias"
+  const handleNavigateToViewAll = () => {
+    setCurrentPage('view-all-complaints');
+    window.scrollTo(0, 0);
+  };
   // --- MANEJADORES DE UI ---
   const toggleNotifications = (e) => {
     if (e && e.stopPropagation) e.stopPropagation();
@@ -131,7 +145,7 @@ function App() {
       
       {currentPage === 'admin-dashboard' ? (
         // VISTA DE ADMINISTRADOR (Sin Header/Footer normales)
-        <AdminDashboard onLogout={handleLogout} />
+        <AdminDashboard onBack={handleBackToHome} onLogout={handleLogout} />
       ) : (
         // VISTA DE CIUDADANO (Con navegación normal)
         <>
@@ -163,10 +177,7 @@ function App() {
           <LoginModal
             isOpen={showLoginModal}
             onClose={() => setShowLoginModal(false)}
-            onLogin={(username, pass) => {
-              handleLogin({ email: username, password: pass }); // Pasamos pass para validar admin
-              setShowLoginModal(false);
-            }}
+            onLogin={(username, pass, remember, role) => handleLogin(username, pass, remember, role)}
           />
 
           {/* --- CONTENIDO PRINCIPAL --- */}
@@ -180,6 +191,7 @@ function App() {
               <Home 
                 onCreateReport={handleNavigateToCreateReport} 
                 onViewDetails={handleViewDetails} 
+                onViewAll={handleNavigateToViewAll}
               />
             )}
             
@@ -217,7 +229,12 @@ function App() {
                 onBack={handleBackToHome} 
               />
             )}
-
+            {currentPage === 'view-all-complaints' && (
+              <ViewAllComplaints 
+                onBack={handleBackToHome} 
+                onViewDetails={handleViewDetails} 
+              />
+            )}
           </div>
           
           <Footer 
