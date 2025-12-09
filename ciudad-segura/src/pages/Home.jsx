@@ -2,8 +2,9 @@ import React from 'react';
 import Hero from '../components/Hero';
 import ComplaintCard from '../components/ComplaintCard';
 import Stats from '../components/Stats';
+import EntitiesSection from '../components/EntitiesSection'; // 1. IMPORTAR
 
-// Recibimos 'onViewDetails'
+// Recibimos 'onViewDetails' y 'onViewAll'
 export default function Home({ onCreateReport, onViewDetails, onViewAll }) {
   const data = [
     { id: 1, category: 'Parques y Jardines', title: 'Mobiliario infantil dañado en Parque Norte', status: 'Urgente', location: 'Parque de la Alameda', img: 'https://www.auto-tecnica.es/wp-content/uploads/2022/08/barrio-de-torrero-la-paz-1080x630.jpeg' },
@@ -35,10 +36,12 @@ export default function Home({ onCreateReport, onViewDetails, onViewAll }) {
         </div>
       </section>
 
-      <div className="container">
+      {/* 2. NUEVA SECCIÓN: ¿Quién resuelve tus reportes? */}
+      <EntitiesSection />
+
+      <div className="container" style={{ paddingTop: '40px' }}>
         <Stats />
       </div>
     </main>
   );
 }
-
