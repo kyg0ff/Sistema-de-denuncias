@@ -6,7 +6,7 @@ export default function Footer({ onNavigateToAbout, onOpenContact }) {
     <footer style={{ padding: '60px 0', borderTop: '1px solid var(--border)', color: 'var(--text-muted)', backgroundColor: 'white', marginTop: 'auto' }}>
       <div className="container" style={{ textAlign: 'center' }}>
         <p style={{ fontWeight: 600, color: 'var(--text-main)', margin: '0 0 12px 0' }}>
-          CiudadSegura &copy; 2024
+          CiudadSegura &copy; {new Date().getFullYear()}
         </p>
         <div style={{ display: 'flex', gap: '24px', justifyContent: 'center', fontSize: '0.9rem' }}>
           <a href="#" style={{ textDecoration: 'none', color: 'var(--text-muted)' }}>Sobre el sistema</a>
