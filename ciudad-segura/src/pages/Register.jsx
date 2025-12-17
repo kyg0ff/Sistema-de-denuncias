@@ -135,20 +135,7 @@ const RegisterPage = ({ onGoLogin, onBack }) => {
               />
             </div>
           </div>
-
-          {/* Distrito */}
-          <div className="input-group">
-            <label>Distrito</label>
-            <div className="input-wrapper">
-              <input
-                type="text"
-                value={district}
-                onChange={(e) => setDistrict(e.target.value)}
-                placeholder="Distrito"
-              />
-            </div>
-          </div>
-
+          
           {/* Email */}
           <div className="input-group">
             <label>Correo electrónico</label>
