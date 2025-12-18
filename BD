@@ -1,0 +1,426 @@
+-- =========================================================
+-- 1. LIMPIEZA E INICIO
+-- =========================================================
+-- NOTA: En OneCompiler a veces no deja borrar schema public,
+-- si da error estas lineas, bórralas y sigue desde el CREATE TABLE.
+-- DROP SCHEMA IF EXISTS public CASCADE;
+-- CREATE SCHEMA public;
+-- GRANT ALL ON SCHEMA public TO postgres;
+-- GRANT ALL ON SCHEMA public TO public;
+
+-- =========================================================
+-- 2. ESTRUCTURA DE DATOS (TABLAS)
+-- =========================================================
+
+-- 2.1 USUARIOS
+CREATE TABLE Usuarios (
+    id_usuario SERIAL PRIMARY KEY,
+    dni VARCHAR(8) UNIQUE,
+    nombre VARCHAR(100),
+    correo VARCHAR(150) UNIQUE,
+    rol VARCHAR(20) CHECK (rol IN ('CIUDADANO', 'AUTORIDAD', 'ADMIN')),
+    activo BOOLEAN DEFAULT TRUE,
+    fecha_creado TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 2.2 ENTIDADES (Comisarías, Municipalidades)
+CREATE TABLE Entidades (
+    id_entidad SERIAL PRIMARY KEY,
+    nombre VARCHAR(150) NOT NULL,
+    distrito VARCHAR(100) NOT NULL,
+    tipo_entidad VARCHAR(50) CHECK (tipo_entidad IN ('RESOLUTORA', 'VERIFICADORA')),
+    latitud DECIMAL(10,8),
+    longitud DECIMAL(11,8),
+    correo_contacto VARCHAR(150)
+);
+
+-- 2.3 CATÁLOGOS
+CREATE TABLE Categorias (
+    id_categoria SERIAL PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    prioridad VARCHAR(20)
+);
+
+CREATE TABLE Tipos_Infraccion (
+    codigo_sutran VARCHAR(10) PRIMARY KEY,
+    descripcion VARCHAR(255) NOT NULL
+);
+
+-- 2.4 OPERACIONES
+CREATE TABLE Autoridades (
+    id_usuario INT UNIQUE NOT NULL,
+    id_entidad INT NOT NULL,
+    cargo VARCHAR(100),
+    CONSTRAINT fk_aut_usu FOREIGN KEY (id_usuario) REFERENCES Usuarios(id_usuario),
+    CONSTRAINT fk_aut_ent FOREIGN KEY (id_entidad) REFERENCES Entidades(id_entidad)
+);
+
+-- Cerebro de Asignación
+CREATE TABLE Reglas_Asignacion (
+    id_categoria INT NOT NULL,
+    distrito VARCHAR(100) NOT NULL,
+    id_entidad_destino INT NOT NULL
+);
+
+-- 2.5 DENUNCIAS (CORE)
+CREATE TABLE Denuncias (
+    id_denuncia SERIAL PRIMARY KEY,
+    codigo_seguimiento VARCHAR(50) UNIQUE, -- Auto-generado
+    id_usuario INT, -- NULL si es anónimo
+    
+    -- Routing
+    id_entidad_asignada INT, -- Auto-asignado
+    distrito_incidente VARCHAR(100),
+    id_categoria INT NOT NULL,
+    
+    -- Datos
+    descripcion TEXT,
+    latitud DECIMAL(10, 8),
+    longitud DECIMAL(11, 8),
+    direccion_referencia VARCHAR(255),
+    estado VARCHAR(30) DEFAULT 'PENDIENTE_VERIFICACION',
+    codigo_infraccion_final VARCHAR(10),
+    
+    fecha_creado TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizado TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    CONSTRAINT fk_den_ent FOREIGN KEY (id_entidad_asignada) REFERENCES Entidades(id_entidad),
+    CONSTRAINT fk_den_cat FOREIGN KEY (id_categoria) REFERENCES Categorias(id_categoria)
+);
+
+CREATE TABLE Evidencias (
+    id_evidencia SERIAL PRIMARY KEY,
+    id_denuncia INT NOT NULL,
+    url_archivo TEXT,
+    CONSTRAINT fk_evi_den FOREIGN KEY (id_denuncia) REFERENCES Denuncias(id_denuncia)
+);
+
+-- 2.6 AUDITORÍA
+CREATE TABLE Denuncia_Historial (
+    id_historial SERIAL PRIMARY KEY,
+    id_denuncia INT,
+    accion VARCHAR(50),
+    estado_anterior VARCHAR(30),
+    estado_nuevo VARCHAR(30),
+    detalle TEXT,
+    fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE Auditoria_Admin (
+    id_auditoria SERIAL PRIMARY KEY,
+    id_admin INT,
+    accion VARCHAR(50),
+    detalle TEXT,
+    fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =========================================================
+-- 3. TRIGGERS (AUTOMATIZACIÓN)
+-- =========================================================
+
+-- 3.1 Trigger de Auto-Routing (Asigna Entidad y Código)
+CREATE OR REPLACE FUNCTION fn_trigger_cerebro() RETURNS TRIGGER AS $$
+DECLARE v_entidad_id INT;
+BEGIN
+    -- Generar Código
+    IF NEW.codigo_seguimiento IS NULL THEN
+        NEW.codigo_seguimiento := 'DEN-' || TO_CHAR(NOW(), 'MMDD') || '-' || SUBSTRING(MD5(RANDOM()::TEXT), 1, 5);
+    END IF;
+
+    -- Buscar Entidad Responsable
+    SELECT id_entidad_destino INTO v_entidad_id FROM Reglas_Asignacion
+    WHERE id_categoria = NEW.id_categoria AND UPPER(distrito) = UPPER(NEW.distrito_incidente);
+
+    -- Asignar (Fallback a ID 1 si no encuentra regla)
+    NEW.id_entidad_asignada := COALESCE(v_entidad_id, 1);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER tg_denuncia_insert BEFORE INSERT ON Denuncias
+FOR EACH ROW EXECUTE FUNCTION fn_trigger_cerebro();
+
+-- 3.2 Trigger de Historial
+CREATE OR REPLACE FUNCTION fn_trigger_historial() RETURNS TRIGGER AS $$
+BEGIN
+    IF (TG_OP = 'UPDATE') AND (OLD.estado IS DISTINCT FROM NEW.estado) THEN
+        INSERT INTO Denuncia_Historial (id_denuncia, accion, estado_anterior, estado_nuevo, detalle)
+        VALUES (NEW.id_denuncia, 'CAMBIO_ESTADO', OLD.estado, NEW.estado, 'Cambio registrado automáticamente');
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER tg_denuncia_update AFTER UPDATE ON Denuncias
+FOR EACH ROW EXECUTE FUNCTION fn_trigger_historial();
+
+-- =========================================================
+-- 4. FUNCIONALIDADES DE NEGOCIO (STORED PROCEDURES)
+-- =========================================================
+
+-- ---------------------------------------------------------
+-- 4.1 ROL USUARIO (CIUDADANO)
+-- ---------------------------------------------------------
+
+-- A. Crear Denuncia Anónima (Retorna Código)
+CREATE OR REPLACE FUNCTION sp_usuario_denuncia_anonima(
+    p_cat INT, p_distrito VARCHAR, p_desc TEXT, p_lat DECIMAL, p_lon DECIMAL, p_foto TEXT
+) RETURNS VARCHAR LANGUAGE plpgsql AS $$
+DECLARE v_cod VARCHAR; v_id INT;
+BEGIN
+    INSERT INTO Denuncias (id_usuario, id_categoria, distrito_incidente, descripcion, latitud, longitud)
+    VALUES (NULL, p_cat, p_distrito, p_desc, p_lat, p_lon)
+    RETURNING codigo_seguimiento, id_denuncia INTO v_cod, v_id;
+
+    IF p_foto IS NOT NULL THEN INSERT INTO Evidencias(id_denuncia, url_archivo) VALUES (v_id, p_foto); END IF;
+    RETURN v_cod;
+END;
+$$;
+
+-- B. Crear Denuncia Registrada (Retorna Código)
+CREATE OR REPLACE FUNCTION sp_usuario_denuncia_registrada(
+    p_id_usuario INT, p_cat INT, p_distrito VARCHAR, p_desc TEXT, p_lat DECIMAL, p_lon DECIMAL
+) RETURNS VARCHAR LANGUAGE plpgsql AS $$
+DECLARE v_cod VARCHAR;
+BEGIN
+    INSERT INTO Denuncias (id_usuario, id_categoria, distrito_incidente, descripcion, latitud, longitud)
+    VALUES (p_id_usuario, p_cat, p_distrito, p_desc, p_lat, p_lon)
+    RETURNING codigo_seguimiento INTO v_cod;
+    RETURN v_cod;
+END;
+$$;
+
+-- C. Buscar Denuncia (Público)
+CREATE OR REPLACE FUNCTION fn_usuario_buscar_denuncia(p_codigo VARCHAR)
+RETURNS TABLE (estado VARCHAR, entidad VARCHAR, respuesta_tecnica VARCHAR) LANGUAGE plpgsql AS $$
+BEGIN
+    RETURN QUERY 
+    SELECT d.estado, e.nombre, COALESCE(t.descripcion, 'En revisión')
+    FROM Denuncias d
+    JOIN Entidades e ON d.id_entidad_asignada = e.id_entidad
+    LEFT JOIN Tipos_Infraccion t ON d.codigo_infraccion_final = t.codigo_sutran
+    WHERE d.codigo_seguimiento = p_codigo;
+END;
+$$;
+
+-- ---------------------------------------------------------
+-- 4.2 ROL AUTORIDAD
+-- ---------------------------------------------------------
+
+-- A. Bandeja de Entrada Inteligente
+CREATE OR REPLACE FUNCTION fn_autoridad_bandeja(p_id_usuario INT)
+RETURNS TABLE (id INT, codigo VARCHAR, distrito VARCHAR, estado VARCHAR) LANGUAGE plpgsql AS $$
+DECLARE v_entidad_id INT;
+BEGIN
+    SELECT id_entidad INTO v_entidad_id FROM Autoridades WHERE id_usuario = p_id_usuario;
+    RETURN QUERY SELECT id_denuncia, codigo_seguimiento, distrito_incidente, estado 
+    FROM Denuncias WHERE id_entidad_asignada = v_entidad_id ORDER BY fecha_creado DESC;
+END;
+$$;
+
+-- B. Validar/Sancionar Denuncia
+CREATE OR REPLACE PROCEDURE sp_autoridad_validar(p_id_denuncia INT, p_codigo_infraccion VARCHAR)
+LANGUAGE plpgsql AS $$
+BEGIN
+    UPDATE Denuncias SET estado = 'VERIFICADA', codigo_infraccion_final = p_codigo_infraccion
+    WHERE id_denuncia = p_id_denuncia;
+END;
+$$;
+
+-- C. Derivar Denuncia (Si se equivocó de entidad)
+CREATE OR REPLACE PROCEDURE sp_autoridad_derivar(p_id_denuncia INT, p_id_usuario INT, p_entidad_destino INT, p_motivo TEXT)
+LANGUAGE plpgsql AS $$
+BEGIN
+    UPDATE Denuncias SET id_entidad_asignada = p_entidad_destino WHERE id_denuncia = p_id_denuncia;
+    INSERT INTO Denuncia_Historial(id_denuncia, accion, detalle) 
+    VALUES (p_id_denuncia, 'DERIVACION', 'Usuario '||p_id_usuario||': '||p_motivo);
+END;
+$$;
+
+-- ---------------------------------------------------------
+-- 4.3 ROL ADMINISTRADOR
+-- ---------------------------------------------------------
+
+-- A. Crear Nueva Autoridad
+CREATE OR REPLACE PROCEDURE sp_admin_crear_autoridad(p_id_admin INT, p_dni_target VARCHAR, p_id_entidad INT, p_cargo VARCHAR)
+LANGUAGE plpgsql AS $$
+DECLARE v_user_id INT;
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM Usuarios WHERE id_usuario = p_id_admin AND rol = 'ADMIN') THEN RAISE EXCEPTION 'No eres admin'; END IF;
+    
+    SELECT id_usuario INTO v_user_id FROM Usuarios WHERE dni = p_dni_target;
+    UPDATE Usuarios SET rol = 'AUTORIDAD' WHERE id_usuario = v_user_id;
+    
+    INSERT INTO Autoridades(id_usuario, id_entidad, cargo) VALUES (v_user_id, p_id_entidad, p_cargo)
+    ON CONFLICT (id_usuario) DO UPDATE SET id_entidad = EXCLUDED.id_entidad;
+    
+    INSERT INTO Auditoria_Admin(id_admin, accion, detalle) VALUES (p_id_admin, 'CREAR_AUTORIDAD', 'DNI: '||p_dni_target);
+END;
+$$;
+
+-- B. Banear Usuario
+CREATE OR REPLACE PROCEDURE sp_admin_banear(p_id_admin INT, p_id_target INT, p_motivo TEXT)
+LANGUAGE plpgsql AS $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM Usuarios WHERE id_usuario = p_id_admin AND rol = 'ADMIN') THEN RAISE EXCEPTION 'No eres admin'; END IF;
+    UPDATE Usuarios SET activo = FALSE WHERE id_usuario = p_id_target;
+    INSERT INTO Auditoria_Admin(id_admin, accion, detalle) VALUES (p_id_admin, 'BANEO', 'Target '||p_id_target||': '||p_motivo);
+END;
+$$;
+
+-- C. Dashboard Global
+CREATE OR REPLACE FUNCTION fn_admin_dashboard()
+RETURNS TABLE (distrito VARCHAR, total_denuncias BIGINT) LANGUAGE plpgsql AS $$
+BEGIN
+    RETURN QUERY SELECT distrito_incidente, COUNT(*) FROM Denuncias GROUP BY distrito_incidente;
+END;
+$$;
+
+-- =========================================================
+-- 5. CARGA DE DATOS (SEMILLA)
+-- =========================================================
+INSERT INTO Categorias (nombre) VALUES ('Mal Estacionamiento'), ('Basura');
+INSERT INTO Tipos_Infraccion VALUES ('G40', 'Estacionar Zona Rigida');
+INSERT INTO Entidades (nombre, distrito, tipo_entidad) VALUES 
+('Central Lima', 'Lima', 'VERIFICADORA'), -- ID 1
+('Comisaría San Isidro', 'San Isidro', 'RESOLUTORA'), -- ID 2
+('Muni Miraflores', 'Miraflores', 'RESOLUTORA'); -- ID 3
+
+-- Usuarios Iniciales
+INSERT INTO Usuarios (nombre, dni, rol) VALUES 
+('Super Admin', '0000', 'ADMIN'),       -- ID 1
+('Pepe Ciudadano', '1111', 'CIUDADANO'), -- ID 2
+('Carlos Futuro Auth', '3333', 'CIUDADANO'), -- ID 3
+('Luis Policia', '2222', 'AUTORIDAD');   -- ID 4
+
+-- Configurar Autoridad Inicial
+INSERT INTO Autoridades (id_usuario, id_entidad) VALUES (4, 2);
+
+-- Reglas del Cerebro
+INSERT INTO Reglas_Asignacion (id_categoria, distrito, id_entidad_destino) VALUES (1, 'San Isidro', 2);
+
+-- =========================================================
+-- 6. SIMULACIÓN (SIN URLs REALES)
+-- =========================================================
+
+DO $$
+DECLARE v_cod VARCHAR; v_den_id INT;
+BEGIN
+    RAISE NOTICE '--- INICIO TEST COMPLETO ---';
+
+    -- 1. USUARIO: Crea denuncia anónima (HE CAMBIADO LA URL POR UN TEXTO SIMPLE)
+    v_cod := sp_usuario_denuncia_anonima(1, 'San Isidro', 'Auto malogrado', -12.0, -77.0, 'foto_evidencia.jpg');
+    RAISE NOTICE '1. Usuario Anónimo creó denuncia: %', v_cod;
+
+    -- 2. USUARIO: Crea denuncia registrada
+    PERFORM sp_usuario_denuncia_registrada(2, 1, 'San Isidro', 'Vecino ruidoso', -12.0, -77.0);
+    RAISE NOTICE '2. Usuario Registrado creó denuncia.';
+    
+    -- 3. AUTORIDAD: Valida una denuncia
+    SELECT id_denuncia INTO v_den_id FROM Denuncias WHERE codigo_seguimiento = v_cod;
+    CALL sp_autoridad_validar(v_den_id, 'G40');
+    RAISE NOTICE '3. Autoridad validó la denuncia %', v_cod;
+
+    -- 4. ADMIN: Crea nueva autoridad
+    CALL sp_admin_crear_autoridad(1, '3333', 3, 'Fiscalizador Miraflores');
+    RAISE NOTICE '4. Admin promovió a Carlos a Autoridad de Miraflores';
+
+    -- 5. ADMIN: Banea usuario
+    CALL sp_admin_banear(1, 2, 'Reportes Falsos');
+    RAISE NOTICE '5. Admin baneó al usuario Pepe';
+
+END $$;
+
+
+DO $$
+DECLARE
+    v_cod VARCHAR;
+    v_id INT;
+    v_estado_busqueda VARCHAR;
+    v_respuesta VARCHAR;
+BEGIN
+    RAISE NOTICE '--- INICIO PRUEBA DEL BUSCADOR ---';
+
+    -- 1. Crear denuncia
+    v_cod := sp_usuario_denuncia_anonima(1, 'San Isidro', 'Prueba ciclo', -12.0, -77.0, NULL);
+    RAISE NOTICE '1. Denuncia creada con código: %', v_cod;
+
+    -- 2. Buscar INMEDIATAMENTE (Debe decir "En revisión")
+    SELECT respuesta_tecnica INTO v_respuesta FROM fn_usuario_buscar_denuncia(v_cod);
+    RAISE NOTICE '2. Búsqueda inicial dice: %', v_respuesta;
+
+    -- 3. La Autoridad VALIDA la denuncia (Simulación interna)
+    SELECT id_denuncia INTO v_id FROM Denuncias WHERE codigo_seguimiento = v_cod;
+    CALL sp_autoridad_validar(v_id, 'G40'); -- G40 es "Estacionar Zona Rigida"
+    
+    -- 4. Buscar FINALMENTE (Debe decir "Estacionar Zona Rigida")
+    SELECT respuesta_tecnica INTO v_respuesta FROM fn_usuario_buscar_denuncia(v_cod);
+    RAISE NOTICE '3. Búsqueda post-validación dice: %', v_respuesta;
+    
+END $$;
+
+
+-- =========================================================
+-- PRUEBA DE ESTRÉS DEL DASHBOARD (SIMULACIÓN DE TRÁFICO)
+-- =========================================================
+
+DO $$
+DECLARE
+    i INT;
+    v_distrito VARCHAR;
+    v_cat INT;
+    v_cod VARCHAR;
+    v_id INT;
+BEGIN
+    RAISE NOTICE '--- 1. INICIANDO GENERACIÓN MASIVA DE DENUNCIAS ---';
+
+    -- Bucle para crear 15 denuncias falsas
+    FOR i IN 1..15 LOOP
+        
+        -- A. Aleatorizar Distrito (1=San Isidro, 2=Miraflores, 3=Lima)
+        IF (i % 3 = 0) THEN v_distrito := 'San Isidro';
+        ELSIF (i % 3 = 1) THEN v_distrito := 'Miraflores';
+        ELSE v_distrito := 'Lima';
+        END IF;
+
+        -- B. Crear Denuncia Anónima
+        v_cod := sp_usuario_denuncia_anonima(
+            1, -- Categoria
+            v_distrito, 
+            'Denuncia masiva nro ' || i, 
+            -12.0 + (i*0.01), -77.0 + (i*0.01), -- Coordenadas falsas variadas
+            NULL
+        );
+
+        -- C. Simular acción de la autoridad en algunas (no en todas)
+        -- Si el número es par, la validamos. Si es impar, se queda pendiente.
+        IF (i % 2 = 0) THEN
+            SELECT id_denuncia INTO v_id FROM Denuncias WHERE codigo_seguimiento = v_cod;
+            -- Validamos con código G40
+            CALL sp_autoridad_validar(v_id, 'G40');
+        END IF;
+
+    END LOOP;
+    
+    RAISE NOTICE '--- CARGA DE DATOS COMPLETADA ---';
+END $$;
+
+-- =========================================================
+-- RESULTADOS DEL DASHBOARD
+-- =========================================================
+
+-- 1. VISTA GENERAL (La función que ya tienes)
+-- Debe mostrar cuántas denuncias hay por distrito
+SELECT 'REPORTE GENERAL' as TITULO, * FROM fn_admin_dashboard();
+
+-- 2. VISTA AVANZADA (Query directa para análisis detallado)
+-- Muestra Distrito + Estado + Cantidad (Para ver cuellos de botella)
+SELECT 
+    distrito_incidente AS distrito,
+    estado,
+    COUNT(*) as cantidad_casos,
+    STRING_AGG(codigo_seguimiento, ', ') as codigos_afectados
+FROM Denuncias
+GROUP BY distrito_incidente, estado
+ORDER BY distrito_incidente, estado;
+     
