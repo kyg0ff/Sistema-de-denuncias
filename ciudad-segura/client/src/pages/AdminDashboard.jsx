@@ -75,13 +75,24 @@ export default function AdminDashboard({ onLogout }) {
     setCurrentItem(item);
     
     if (type === 'user') {
-      setFormData(item || { name: '', email: '', role: 'Ciudadano', status: 'Activo' });
+      setFormData(item || {
+        name: '',
+        lastName: '',
+        dni: '',
+        email: '',
+        phone: '',
+        password: '',
+        role: 'Ciudadano',
+        status: 'Activo',
+        orgId: '',     // para autoridad
+        cargo: ''      // para autoridad
+      });
     } else if (type === 'auth') {
       setFormData(item || { name: '', cargo: '', status: 'Activo', orgId: selectedOrg?.id });
     } else if (type === 'org') {
       setFormData(item || { name: '', type: 'Gobierno Local', color: '#4f46e5' });
     } else if (type === 'delete') {
-      setDeleteTarget(mode); // 'user' o 'auth'
+      setDeleteTarget(mode);
     }
   };
 
@@ -556,6 +567,8 @@ export default function AdminDashboard({ onLogout }) {
       {/* --- FORMULARIOS MODALES --- */}
       
       {/* 1. Modal Usuario */}
+      {/* --- MODAL USUARIO ACTUALIZADO --- */}
+      {/* === MODAL USUARIO CON DISEÑO EN DOS COLUMNAS === */}
       <AdminModal 
         isOpen={modalType === 'user'} 
         onClose={closeModal} 
@@ -567,31 +580,117 @@ export default function AdminDashboard({ onLogout }) {
           </>
         }
       >
-        <form>
-          <div className="admin-input-group">
-            <label>Nombre</label>
-            <input 
-              value={formData.name || ''} 
-              onChange={e => setFormData({...formData, name: e.target.value})} 
-            />
+        <form onSubmit={handleSave} style={{ display: 'grid', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div className="admin-input-group">
+              <label>Nombre</label>
+              <input 
+                value={formData.name || ''} 
+                onChange={e => setFormData({...formData, name: e.target.value})} 
+                required
+              />
+            </div>
+            <div className="admin-input-group">
+              <label>Apellido</label>
+              <input 
+                value={formData.lastName || ''} 
+                onChange={e => setFormData({...formData, lastName: e.target.value})} 
+                required
+              />
+            </div>
+
+            <div className="admin-input-group">
+              <label>DNI</label>
+              <input 
+                value={formData.dni || ''} 
+                onChange={e => setFormData({...formData, dni: e.target.value})} 
+                required
+              />
+            </div>
+            <div className="admin-input-group">
+              <label>Correo</label>
+              <input 
+                type="email"
+                value={formData.email || ''} 
+                onChange={e => setFormData({...formData, email: e.target.value})} 
+                required
+              />
+            </div>
+
+            <div className="admin-input-group">
+              <label>Teléfono</label>
+              <input 
+                value={formData.phone || ''} 
+                onChange={e => setFormData({...formData, phone: e.target.value})} 
+              />
+            </div>
+            {modalMode === 'add' && (
+              <div className="admin-input-group">
+                <label>Contraseña</label>
+                <input 
+                  type="password"
+                  value={formData.password || ''} 
+                  onChange={e => setFormData({...formData, password: e.target.value})} 
+                  required
+                />
+              </div>
+            )}
+
+            <div className="admin-input-group">
+              <label>Rol</label>
+              <select 
+                value={formData.role || 'Ciudadano'} 
+                onChange={e => setFormData({...formData, role: e.target.value})}
+              >
+                <option value="Ciudadano">Ciudadano</option>
+                <option value="Autoridad">Autoridad</option>
+                <option value="Administrador">Administrador</option>
+              </select>
+            </div>
+            <div className="admin-input-group">
+              <label>Estado</label>
+              <select 
+                value={formData.status || 'Activo'} 
+                onChange={e => setFormData({...formData, status: e.target.value})}
+              >
+                <option value="Activo">Activo</option>
+                <option value="Inactivo">Inactivo</option>
+              </select>
+            </div>
           </div>
-          <div className="admin-input-group">
-            <label>Correo</label>
-            <input 
-              value={formData.email || ''} 
-              onChange={e => setFormData({...formData, email: e.target.value})} 
-            />
-          </div>
-          <div className="admin-input-group">
-            <label>Estado</label>
-            <select 
-              value={formData.status || 'Activo'} 
-              onChange={e => setFormData({...formData, status: e.target.value})}
-            >
-              <option value="active">Activo</option>
-              <option value="inactive">Inactivo</option>
-            </select>
-          </div>
+
+          {/* Campos adicionales para Autoridad */}
+          {formData.role === 'Autoridad' && (
+            <div style={{ marginTop: '8px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
+              <h4 style={{ margin: '0 0 12px 0', color: 'var(--deep-blue)', fontSize: '1rem' }}>
+                Datos de Autoridad
+              </h4>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div className="admin-input-group">
+                  <label>Organización</label>
+                  <select 
+                    value={formData.orgId || ''} 
+                    onChange={e => setFormData({...formData, orgId: e.target.value})}
+                    required
+                  >
+                    <option value="">Seleccionar organización</option>
+                    {orgs.map(org => (
+                      <option key={org.id} value={org.id}>{org.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="admin-input-group">
+                  <label>Cargo</label>
+                  <input 
+                    value={formData.cargo || ''} 
+                    onChange={e => setFormData({...formData, cargo: e.target.value})} 
+                    placeholder="Ej. Jefe de Seguridad"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </form>
       </AdminModal>
 
