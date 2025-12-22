@@ -3,7 +3,7 @@ import Button from '../components/Button';
 import StatCard from '../components/StatCard';
 import AdminSidebar from '../components/AdminSidebar';
 import AdminModal from '../components/AdminModal';
-import { adminService } from '../services/api'; // <-- NUEVO
+import { adminService } from '../services/api';
 
 export default function AdminDashboard({ onLogout }) {
   // --- ESTADOS ---
@@ -17,11 +17,15 @@ export default function AdminDashboard({ onLogout }) {
   const [isLoading, setIsLoading] = useState(true);
 
   // Estados de Modal
-  const [modalType, setModalType] = useState(null); // 'user', 'auth', 'org', 'delete'
+  const [modalType, setModalType] = useState(null);
   const [modalMode, setModalMode] = useState('add'); 
   const [currentItem, setCurrentItem] = useState(null); 
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [formData, setFormData] = useState({});
+
+  // Modal de éxito
+  const [successModalOpen, setSuccessModalOpen] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   // --- CARGAR DATOS ---
   useEffect(() => {
@@ -37,7 +41,6 @@ export default function AdminDashboard({ onLogout }) {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      // Cargar datos en paralelo
       const [statsRes, usersRes, orgsRes, authRes] = await Promise.all([
         adminService.getStatistics(),
         adminService.getUsers(),
@@ -84,13 +87,17 @@ export default function AdminDashboard({ onLogout }) {
         password: '',
         role: 'Ciudadano',
         status: 'Activo',
-        orgId: '',     // para autoridad
-        cargo: ''      // para autoridad
+        orgId: '',
+        cargo: ''
       });
     } else if (type === 'auth') {
       setFormData(item || { name: '', cargo: '', status: 'Activo', orgId: selectedOrg?.id });
     } else if (type === 'org') {
-      setFormData(item || { name: '', type: 'Gobierno Local', color: '#4f46e5' });
+      setFormData(item || {
+        name: '',
+        contactEmail: '',
+        contactPhone: ''
+      });
     } else if (type === 'delete') {
       setDeleteTarget(mode);
     }
@@ -103,6 +110,11 @@ export default function AdminDashboard({ onLogout }) {
     setDeleteTarget(null);
   };
 
+  const showSuccess = (message) => {
+    setSuccessMessage(message);
+    setSuccessModalOpen(true);
+  };
+
   // --- CRUD OPERACIONES ---
   const handleSave = async (e) => {
     e.preventDefault();
@@ -110,14 +122,12 @@ export default function AdminDashboard({ onLogout }) {
     try {
       if (modalType === 'user') {
         if (modalMode === 'add') {
-          // Para agregar usuario nuevo, necesitarías endpoint de creación
-          alert('Función de creación de usuario desde admin pendiente');
+          showSuccess('Función de creación de usuario desde admin pendiente');
         } else {
-          // Editar usuario existente
           const response = await adminService.updateUser(currentItem.id, formData);
           if (response.success) {
             setUsers(users.map(u => u.id === currentItem.id ? response.data : u));
-            alert('Usuario actualizado');
+            showSuccess('Usuario actualizado exitosamente');
           }
         }
       }
@@ -129,13 +139,13 @@ export default function AdminDashboard({ onLogout }) {
           });
           if (response.success) {
             setAuthorities([...authorities, response.data]);
-            alert('Autoridad creada');
+            showSuccess('Autoridad creada exitosamente');
           }
         } else {
           const response = await adminService.updateAuthority(currentItem.id, formData);
           if (response.success) {
             setAuthorities(authorities.map(a => a.id === currentItem.id ? response.data : a));
-            alert('Autoridad actualizada');
+            showSuccess('Autoridad actualizada exitosamente');
           }
         }
       }
@@ -144,19 +154,20 @@ export default function AdminDashboard({ onLogout }) {
           const response = await adminService.createOrganization(formData);
           if (response.success) {
             setOrgs([...orgs, response.data]);
-            alert('Organización creada');
+            showSuccess('Organización creada exitosamente');
           }
         }
       }
       
       closeModal();
-      // Recargar datos
       if (selectedOrg) {
         loadAuthoritiesByOrg(selectedOrg.id);
+      } else {
+        loadData();
       }
     } catch (error) {
       console.error('Error guardando:', error);
-      alert('Error al guardar');
+      alert('Error al guardar: ' + (error.message || 'Desconocido'));
     }
   };
 
@@ -166,14 +177,14 @@ export default function AdminDashboard({ onLogout }) {
         const response = await adminService.deleteUser(currentItem.id);
         if (response.success) {
           setUsers(users.filter(u => u.id !== currentItem.id));
-          alert('Usuario marcado como inactivo');
+          showSuccess('Usuario marcado como inactivo');
         }
       }
       if (deleteTarget === 'auth') {
         const response = await adminService.deleteAuthority(currentItem.id);
         if (response.success) {
           setAuthorities(authorities.filter(a => a.id !== currentItem.id));
-          alert('Autoridad eliminada');
+          showSuccess('Autoridad eliminada exitosamente');
         }
       }
       closeModal();
@@ -290,7 +301,7 @@ export default function AdminDashboard({ onLogout }) {
       <div className="flex-between" style={{ marginBottom: '24px' }}>
         <div>
           <h2 style={{ fontSize: '1.5rem', color: 'var(--deep-blue)', margin: 0, fontWeight: 700 }}>Entidades y Organizaciones</h2>
-          <p style={{ margin: '4px 0 0 0', color: 'var(--text-muted)' }}>Selecciona una entidad para gestionar su personal.</p>
+          <p style={{ margin: '4px 0 0 0', color: 'var(--text-muted)' }}>Selecciona una entidad para ver su personal.</p>
         </div>
         <Button 
           onClick={() => openModal('org', 'add')} 
@@ -331,8 +342,8 @@ export default function AdminDashboard({ onLogout }) {
                     width: '56px', 
                     height: '56px', 
                     borderRadius: '12px', 
-                    backgroundColor: org.color + '15', 
-                    color: org.color, 
+                    backgroundColor: '#e0e7ff', 
+                    color: '#4f46e5', 
                     display: 'flex', 
                     alignItems: 'center', 
                     justifyContent: 'center' 
@@ -359,21 +370,8 @@ export default function AdminDashboard({ onLogout }) {
                     {org.name}
                   </h3>
                   <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-                    {org.type}
+                    Ver personal →
                   </p>
-                </div>
-                <div style={{ 
-                  marginTop: 'auto', 
-                  paddingTop: '16px', 
-                  borderTop: '1px solid #f1f5f9', 
-                  color: 'var(--medium-blue)', 
-                  fontSize: '0.9rem', 
-                  fontWeight: 600, 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '6px' 
-                }}>
-                  Gestionar Personal →
                 </div>
               </div>
             );
@@ -383,6 +381,7 @@ export default function AdminDashboard({ onLogout }) {
     </div>
   );
 
+  // VISTA DETALLADA DE ORGANIZACIÓN (SIN BOTÓN DE AÑADIR NI ACCIONES)
   const renderOrgDetails = () => (
     <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
       <div style={{ marginBottom: '24px' }}>
@@ -401,39 +400,33 @@ export default function AdminDashboard({ onLogout }) {
             marginBottom: '16px' 
           }}
         >
-          ← Volver
+          ← Volver a organizaciones
         </button>
-        <div className="flex-between">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{ 
-              width: '48px', 
-              height: '48px', 
-              borderRadius: '10px', 
-              backgroundColor: selectedOrg.color + '15', 
-              color: selectedOrg.color, 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center' 
-            }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M3 21h18v-8a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8z"></path>
-                <polyline points="9 10 9 21 15 21 15 10"></polyline>
-                <path d="M12 2L3 7v3h18V7L12 2z"></path>
-              </svg>
-            </div>
-            <div>
-              <h2 style={{ fontSize: '1.5rem', color: 'var(--deep-blue)', margin: 0, fontWeight: 700 }}>
-                {selectedOrg.name}
-              </h2>
-              <p style={{ margin: '4px 0 0 0', color: 'var(--text-muted)' }}>Gestión de autoridades</p>
-            </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ 
+            width: '64px', 
+            height: '64px', 
+            borderRadius: '12px', 
+            backgroundColor: '#e0e7ff', 
+            color: '#4f46e5', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center' 
+          }}>
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M3 21h18v-8a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8z"></path>
+              <polyline points="9 10 9 21 15 21 15 10"></polyline>
+              <path d="M12 2L3 7v3h18V7L12 2z"></path>
+            </svg>
           </div>
-          <Button 
-            onClick={() => openModal('auth', 'add')} 
-            style={{ backgroundColor: 'var(--deep-blue)', color: 'white' }}
-          >
-            + Añadir Autoridad
-          </Button>
+          <div>
+            <h2 style={{ fontSize: '1.8rem', color: 'var(--deep-blue)', margin: 0, fontWeight: 700 }}>
+              {selectedOrg.name}
+            </h2>
+            <p style={{ margin: '8px 0 0 0', color: 'var(--text-muted)', fontSize: '1rem' }}>
+              Personal de la organización
+            </p>
+          </div>
         </div>
       </div>
       
@@ -448,17 +441,15 @@ export default function AdminDashboard({ onLogout }) {
               <tr>
                 <th>Nombre</th>
                 <th>Cargo</th>
-                <th>Estado</th>
-                <th style={{ textAlign: 'right' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {authorities.filter(a => a.orgId === selectedOrg.id).map(auth => (
                 <tr key={auth.id}>
-                  <td style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <td style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 0' }}>
                     <div style={{ 
-                      width: '36px', 
-                      height: '36px', 
+                      width: '40px', 
+                      height: '40px', 
                       borderRadius: '50%', 
                       backgroundColor: '#f1f5f9', 
                       color: 'var(--deep-blue)', 
@@ -466,41 +457,24 @@ export default function AdminDashboard({ onLogout }) {
                       alignItems: 'center', 
                       justifyContent: 'center', 
                       fontWeight: 'bold', 
-                      fontSize: '0.9rem' 
+                      fontSize: '1rem' 
                     }}>
-                      {auth.name.charAt(0)}
+                      {auth.name.charAt(0).toUpperCase()}
                     </div>
                     <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{auth.name}</span>
                   </td>
-                  <td style={{ color: 'var(--text-muted)' }}>{auth.cargo}</td>
-                  <td>
-                    <span style={{ 
-                      backgroundColor: auth.status === 'Activo' ? '#dcfce7' : '#fef9c3', 
-                      color: auth.status === 'Activo' ? '#166534' : '#854d0e', 
-                      padding: '4px 10px', 
-                      borderRadius: '20px', 
-                      fontSize: '0.8rem', 
-                      fontWeight: 700 
-                    }}>
-                      {auth.status}
-                    </span>
-                  </td>
-                  <td style={{ textAlign: 'right' }}>
-                    <button 
-                      onClick={() => openModal('auth', 'edit', auth)} 
-                      className="action-btn edit"
-                    >
-                      Editar
-                    </button>
-                    <button 
-                      onClick={() => openModal('delete', 'auth', auth)} 
-                      className="action-btn delete"
-                    >
-                      Remover
-                    </button>
+                  <td style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>
+                    {auth.cargo || '—'}
                   </td>
                 </tr>
               ))}
+              {authorities.filter(a => a.orgId === selectedOrg.id).length === 0 && (
+                <tr>
+                  <td colSpan="2" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                    No hay autoridades registradas en esta organización.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -531,30 +505,10 @@ export default function AdminDashboard({ onLogout }) {
               </div>
             ) : statistics && (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '24px' }}>
-                <StatCard 
-                  title="Usuarios Totales" 
-                  value={statistics.totalUsers} 
-                  color="#4f46e5" 
-                  icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>} 
-                />
-                <StatCard 
-                  title="Organizaciones" 
-                  value={statistics.totalOrganizations} 
-                  color="#059669" 
-                  icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line></svg>} 
-                />
-                <StatCard 
-                  title="Autoridades Activas" 
-                  value={statistics.totalAuthorities} 
-                  color="#d97706" 
-                  icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>} 
-                />
-                <StatCard 
-                  title="Denuncias Activas" 
-                  value={statistics.activeComplaints} 
-                  color="#dc2626" 
-                  icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>} 
-                />
+                <StatCard title="Usuarios Totales" value={statistics.totalUsers} color="#4f46e5" />
+                <StatCard title="Organizaciones" value={statistics.totalOrganizations} color="#059669" />
+                <StatCard title="Autoridades Activas" value={statistics.totalAuthorities} color="#d97706" />
+                <StatCard title="Denuncias Activas" value={statistics.activeComplaints} color="#dc2626" />
               </div>
             )}
           </div>
@@ -567,8 +521,6 @@ export default function AdminDashboard({ onLogout }) {
       {/* --- FORMULARIOS MODALES --- */}
       
       {/* 1. Modal Usuario */}
-      {/* --- MODAL USUARIO ACTUALIZADO --- */}
-      {/* === MODAL USUARIO CON DISEÑO EN DOS COLUMNAS === */}
       <AdminModal 
         isOpen={modalType === 'user'} 
         onClose={closeModal} 
@@ -598,7 +550,6 @@ export default function AdminDashboard({ onLogout }) {
                 required
               />
             </div>
-
             <div className="admin-input-group">
               <label>DNI</label>
               <input 
@@ -616,7 +567,6 @@ export default function AdminDashboard({ onLogout }) {
                 required
               />
             </div>
-
             <div className="admin-input-group">
               <label>Teléfono</label>
               <input 
@@ -635,7 +585,6 @@ export default function AdminDashboard({ onLogout }) {
                 />
               </div>
             )}
-
             <div className="admin-input-group">
               <label>Rol</label>
               <select 
@@ -658,8 +607,6 @@ export default function AdminDashboard({ onLogout }) {
               </select>
             </div>
           </div>
-
-          {/* Campos adicionales para Autoridad */}
           {formData.role === 'Autoridad' && (
             <div style={{ marginTop: '8px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
               <h4 style={{ margin: '0 0 12px 0', color: 'var(--deep-blue)', fontSize: '1rem' }}>
@@ -706,7 +653,7 @@ export default function AdminDashboard({ onLogout }) {
           </>
         }
       >
-        <form>
+        <form onSubmit={handleSave}>
           <div className="admin-input-group">
             <label>Nombre</label>
             <input 
@@ -735,11 +682,11 @@ export default function AdminDashboard({ onLogout }) {
         </form>
       </AdminModal>
 
-      {/* 3. Modal Organización */}
+      {/* 3. Modal Organización - Actualizado con nuevos campos */}
       <AdminModal 
         isOpen={modalType === 'org'} 
         onClose={closeModal} 
-        title="Nueva Organización"
+        title={modalMode === 'add' ? 'Nueva Organización' : 'Editar Organización'}
         footer={
           <>
             <button onClick={closeModal} className="cancel-btn">Cancelar</button>
@@ -747,39 +694,70 @@ export default function AdminDashboard({ onLogout }) {
           </>
         }
       >
-        <form>
-          <div className="admin-input-group">
-            <label>Nombre Entidad</label>
-            <input 
-              value={formData.name || ''} 
-              onChange={e => setFormData({...formData, name: e.target.value})} 
-              placeholder="Ej. Comisaría Central" 
-            />
+        <form onSubmit={handleSave} style={{ display: 'grid', gap: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            <div className="admin-input-group">
+              <label>Nombre de la Organización</label>
+              <input 
+                value={formData.name || ''} 
+                onChange={e => setFormData({...formData, name: e.target.value})} 
+                placeholder="Ej. Comisaría Central"
+                required
+              />
+            </div>
+            <div className="admin-input-group">
+              <label>Correo de Contacto</label>
+              <input 
+                type="email"
+                value={formData.contactEmail || ''} 
+                onChange={e => setFormData({...formData, contactEmail: e.target.value})} 
+                placeholder="ejemplo@organizacion.gob"
+                required
+              />
+            </div>
+            <div className="admin-input-group">
+              <label>Número de Contacto</label>
+              <input 
+                value={formData.contactPhone || ''} 
+                onChange={e => setFormData({...formData, contactPhone: e.target.value})} 
+                placeholder="+51 999 888 777"
+              />
+            </div>
+            {/* Espacio vacío para equilibrar */}
+            <div></div>
           </div>
-          <div className="admin-input-group">
-            <label>Tipo</label>
-            <select 
-              value={formData.type || 'Gobierno Local'} 
-              onChange={e => setFormData({...formData, type: e.target.value})}
+          <div style={{ marginTop: '12px' }}>
+            <button
+              type="button"
+              onClick={() => alert('Funcionalidad de mapa en desarrollo. Pronto podrás marcar la ubicación en un mapa interactivo.')}
+              style={{
+                width: '100%',
+                padding: '14px 20px',
+                backgroundColor: '#f1f5f9',
+                border: '2px dashed #94a3b8',
+                borderRadius: '12px',
+                color: '#475569',
+                fontSize: '1rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '10px',
+                transition: '0.2s'
+              }}
+              onMouseOver={(e) => e.target.style.backgroundColor = '#e2e8f0'}
+              onMouseOut={(e) => e.target.style.backgroundColor = '#f1f5f9'}
             >
-              <option>Gobierno Local</option>
-              <option>Seguridad</option>
-              <option>Salud/Ambiente</option>
-              <option>Servicios Públicos</option>
-            </select>
-          </div>
-          <div className="admin-input-group">
-            <label>Color</label>
-            <select 
-              value={formData.color || '#4f46e5'} 
-              onChange={e => setFormData({...formData, color: e.target.value})}
-            >
-              <option value="#4f46e5">Azul</option>
-              <option value="#059669">Verde</option>
-              <option value="#d97706">Ámbar</option>
-              <option value="#dc2626">Rojo</option>
-              <option value="#7c3aed">Violeta</option>
-            </select>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                <circle cx="12" cy="10" r="3"></circle>
+              </svg>
+              Marcar ubicación en el mapa
+            </button>
+            <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '8px 0 0 0', textAlign: 'center' }}>
+              Próximamente: selecciona la ubicación exacta con un clic en el mapa.
+            </p>
           </div>
         </form>
       </AdminModal>
@@ -824,6 +802,28 @@ export default function AdminDashboard({ onLogout }) {
           </p>
         </div>
       </AdminModal>
+
+      {/* Nuevo Modal de Éxito (ventana emergente para todas las operaciones) */}
+      <AdminModal
+        isOpen={successModalOpen}
+        onClose={() => setSuccessModalOpen(false)}
+        title="Operación Exitosa"
+        width="500px" // Más pequeño para mensajes de éxito
+      >
+        <div style={{ textAlign: 'center', padding: '20px' }}>
+          <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2" style={{ marginBottom: '16px' }}>
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
+          <p style={{ fontSize: '1.1rem', color: 'var(--text-main)', marginBottom: '20px' }}>
+            {successMessage}
+          </p>
+          <Button onClick={() => setSuccessModalOpen(false)} style={{ backgroundColor: '#059669', color: 'white' }}>
+            Cerrar
+          </Button>
+        </div>
+      </AdminModal>
+
     </div>
   );
 }
