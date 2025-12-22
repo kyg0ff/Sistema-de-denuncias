@@ -11,9 +11,16 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:5173', 'https://sistema-de-denuncias.onrender.com'] // Agrega tu URL de frontend
+  origin: [
+    'http://localhost:5173',
+    'https://ciudad-segura-frontend.onrender.com',  // ← agrega tu URL del frontend
+    'https://ciudad-segura-backend.onrender.com'    // por si acaso
+  ],
+  credentials: true // si usas cookies más adelante
 }));
 app.use(express.json());
+
+
 
 
 // Rutas
