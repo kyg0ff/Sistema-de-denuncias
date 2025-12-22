@@ -1,5 +1,6 @@
 // Configuración base para todas las llamadas API
-const API_BASE_URL = '/api';
+// const API_BASE_URL = '/api';
+const API_BASE_URL = 'https://ciudad-segura-server.onrender.com/api';
 
 // Función helper para hacer fetch
 export const apiRequest = async (endpoint, options = {}) => {
