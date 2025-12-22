@@ -9,23 +9,11 @@ const notificationRoutes = require('./routes/notificationRoutes');
 
 const app = express();
 
-/* Middleware
+// Middleware
 app.use(cors({
-  origin: ['http://localhost:5173', 'https://ciudad-segura-cliente.onrender.com'] // Agrega tu URL de frontend
+  origin: ['http://localhost:5173', 'https://sistema-de-denuncias.onrender.com'] // Agrega tu URL de frontend
 }));
-app.use(express.json());*/
-// ✅ CORS CONFIGURACIÓN CORRECTA Y FLEXIBLE (para desarrollo y deploy en Render)
-app.use(cors({
-  origin: true,                  // Permite cualquier origen (ideal para demo)
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
-// Manejo explícito de preflight para todas las rutas
-app.options('*', cors());  // ← Esto es clave para que OPTIONS no dé 404
-
 app.use(express.json());
-
 
 
 // Rutas
