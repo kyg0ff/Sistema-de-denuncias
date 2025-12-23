@@ -2,29 +2,22 @@ import React, { useState, useEffect } from 'react';
 import Hero from '../components/Hero';
 import ComplaintCard from '../components/ComplaintCard';
 import Stats from '../components/Stats';
-import { statsService, complaintsService } from '../services/api';
+import { statsService, complaintsService } from '../services/api'; // <-- NUEVO
 
 export default function Home({ onCreateReport, onViewDetails, onViewAll }) {
   const [recentComplaints, setRecentComplaints] = useState([]);
   const [homeStats, setHomeStats] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [user, setUser] = useState(null);
 
+  // Cargar datos del home
   useEffect(() => {
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-      try {
-        setUser(JSON.parse(savedUser));
-      } catch (e) {
-        console.error("Error al parsear usuario", e);
-      }
-    }
     loadHomeData();
   }, []);
 
   const loadHomeData = async () => {
     setIsLoading(true);
     try {
+      // Cargar estadísticas y denuncias en paralelo
       const [statsResponse, complaintsResponse] = await Promise.all([
         statsService.getHomeStats(),
         complaintsService.getAll()
@@ -33,8 +26,10 @@ export default function Home({ onCreateReport, onViewDetails, onViewAll }) {
       if (statsResponse.success) {
         setHomeStats(statsResponse.data);
         
+        // Transformar denuncias recientes para las cards
         if (statsResponse.data.recentComplaints) {
           const transformedComplaints = statsResponse.data.recentComplaints.map(complaint => {
+            // Mapear estados del backend
             const statusMap = {
               'pendiente': 'Pendiente',
               'en_revision': 'En Revisión',
@@ -44,12 +39,11 @@ export default function Home({ onCreateReport, onViewDetails, onViewAll }) {
 
             return {
               id: complaint.id,
-              category: complaint.categoria || complaint.category, 
-              title: complaint.titulo || complaint.title || `Denuncia ${complaint.codigo_seguimiento}`,
-              status: statusMap[complaint.estado || complaint.status] || 'Pendiente',
-              location: complaint.ubicacion || complaint.location || 'Sin ubicación',
-              createdAt: complaint.fecha_creacion || complaint.createdAt,
-              img: getCategoryImage(complaint.categoria || complaint.category)
+              category: complaint.categoryName || complaint.category,
+              title: complaint.title,
+              status: statusMap[complaint.status] || complaint.status,
+              location: complaint.location,
+              img: getCategoryImage(complaint.category)
             };
           });
           setRecentComplaints(transformedComplaints);
@@ -57,19 +51,47 @@ export default function Home({ onCreateReport, onViewDetails, onViewAll }) {
       }
     } catch (error) {
       console.error('Error cargando datos del home:', error);
-      // Datos de respaldo...
+      
+      // Datos de respaldo si el backend falla
+      setRecentComplaints([
+        { 
+          id: 1, 
+          category: 'Parques y Jardines', 
+          title: 'Mobiliario infantil dañado en Parque Norte', 
+          status: 'Urgente', 
+          location: 'Parque de la Alameda', 
+          img: 'https://www.auto-tecnica.es/wp-content/uploads/2022/08/barrio-de-torrero-la-paz-1080x630.jpeg' 
+        },
+        { 
+          id: 2, 
+          category: 'Alumbrado Público', 
+          title: 'Farolas fundidas en cruce peatonal', 
+          status: 'En Progreso', 
+          location: 'Av. Constitución', 
+          img: 'https://www.auto-tecnica.es/wp-content/uploads/2022/08/barrio-de-torrero-la-paz-1080x630.jpeg' 
+        },
+        { 
+          id: 3, 
+          category: 'Vía Pública', 
+          title: 'Bache profundo peligroso para motos', 
+          status: 'Resuelta', 
+          location: 'Calle Mayor, 45', 
+          img: 'https://www.auto-tecnica.es/wp-content/uploads/2022/08/barrio-de-torrero-la-paz-1080x630.jpeg' 
+        }
+      ]);
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Función para obtener imagen según categoría
   const getCategoryImage = (category) => {
     const images = {
-      'obstruccion': 'https://images.unsplash.com/photo-1562512685-2e6f2cb66258?q=80&w=800',
+      'obstruccion': 'https://images.unsplash.com/photo-1562512685-2e6f2cb66258?q=80&w=800&auto=format&fit=crop',
       'invasion': 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?q=80&w=800',
       'zonas': 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?q=80&w=800',
       'accesos': 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=800',
-      'conducta': 'https://images.unsplash.com/photo-1549924231-f129b911e442?q=80&w=800'
+      'conducta': 'https://images.unsplash.com/photo-1549924231-f129b911e442?q=80&w-800'
     };
     return images[category] || 'https://www.auto-tecnica.es/wp-content/uploads/2022/08/barrio-de-torrero-la-paz-1080x630.jpeg';
   };
@@ -77,7 +99,7 @@ export default function Home({ onCreateReport, onViewDetails, onViewAll }) {
   return (
     <main>
       <div className="container">
-        <Hero onCreateReport={onCreateReport} onViewAll={onViewAll} user={user} />
+        <Hero onCreateReport={onCreateReport} onViewAll={onViewAll} />
       </div>
 
       <section className="container" style={{ marginTop: '80px', marginBottom: '20px' }}>
@@ -92,12 +114,21 @@ export default function Home({ onCreateReport, onViewDetails, onViewAll }) {
         {isLoading ? (
           <div style={{ textAlign: 'center', padding: '40px' }}>
             <div style={{ 
-              width: '40px', height: '40px', margin: '0 auto 20px',
-              border: '3px solid var(--light-gray)', borderTopColor: 'var(--medium-blue)',
-              borderRadius: '50%', animation: 'spin 1s linear infinite'
+              width: '40px', 
+              height: '40px', 
+              margin: '0 auto 20px',
+              border: '3px solid var(--light-gray)',
+              borderTopColor: 'var(--medium-blue)',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite'
             }}></div>
             <p style={{ color: 'var(--text-muted)' }}>Cargando denuncias...</p>
-            <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+            <style>{`
+              @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+              }
+            `}</style>
           </div>
         ) : (
           <div className="cards-grid">
@@ -113,6 +144,7 @@ export default function Home({ onCreateReport, onViewDetails, onViewAll }) {
       </section>
 
       <div className="container" style={{ paddingTop: '40px' }}>
+        {/* Pasar estadísticas reales al componente Stats */}
         <Stats homeStats={homeStats} />
       </div>
     </main>

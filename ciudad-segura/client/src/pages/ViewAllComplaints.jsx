@@ -6,6 +6,7 @@ import { complaintsService } from '../services/api'; // <-- NUEVO
 // Transformar datos del backend al formato de la tabla
 const transformComplaintData = (complaints) => {
   return complaints.map(complaint => {
+    // Mapear estados del backend a los que usa el frontend
     const statusMap = {
       'pendiente': 'Pendiente',
       'en_revision': 'En Revisión',
@@ -21,21 +22,23 @@ const transformComplaintData = (complaints) => {
       'conducta': 'Conducta Indebida'
     };
 
-    // Tomamos la fecha del campo correcto de Postgres
-    const rawDate = complaint.fecha_creacion || complaint.createdAt;
-
     return {
       id: complaint.id,
-      title: complaint.titulo || complaint.title || `Denuncia ${complaint.codigo_seguimiento}`,
-      category: categoryMap[complaint.categoria || complaint.category] || 'Otros',
-      status: statusMap[complaint.estado || complaint.status] || 'Pendiente',
-      location: complaint.ubicacion || (complaint.location?.address) || 'Cusco, Perú',
-      date: new Date(rawDate).toLocaleDateString('es-ES', {
-        day: '2-digit', month: 'short', year: 'numeric'
+      title: complaint.title || `Denuncia ${complaint.id}`,
+      category: categoryMap[complaint.category] || complaint.category,
+      status: statusMap[complaint.status] || complaint.status,
+      location: complaint.location?.address || 'Ubicación no especificada',
+      date: new Date(complaint.createdAt).toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
       }),
-      time: new Date(rawDate).toLocaleTimeString('es-ES', {
-        hour: '2-digit', minute: '2-digit'
-      })
+      time: new Date(complaint.createdAt).toLocaleTimeString('es-ES', {
+        hour: '2-digit',
+        minute: '2-digit'
+      }),
+      // Datos adicionales para búsqueda
+      originalData: complaint
     };
   });
 };
