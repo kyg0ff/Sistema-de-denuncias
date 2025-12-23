@@ -226,66 +226,19 @@ export default function AdminDashboard({ onLogout }) {
               </tr>
             </thead>
             <tbody>
-              {users.map(u => (
+              // Ejemplo de cómo mostrar los nombres en la tabla de AdminDashboard.jsx
+              {users.map((u) => (
                 <tr key={u.id}>
-                  <td style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ 
-                      width: '36px', 
-                      height: '36px', 
-                      borderRadius: '50%', 
-                      backgroundColor: 'var(--soft-blue)', 
-                      color: 'var(--deep-blue)', 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center', 
-                      fontWeight: 'bold', 
-                      fontSize: '0.9rem' 
-                    }}>
-                      {u.name?.charAt(0) || 'U'}
-                    </div>
-                    <div>
-                      <div style={{ fontWeight: 600, color: 'var(--text-main)' }}>{u.name} {u.lastName}</div>
-                      <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{u.email}</div>
-                    </div>
+                  <td style={{ fontWeight: 600 }}>
+                    {/* Si viene del back es u.nombres, si es manual u.name */}
+                    {u.nombres ? `${u.nombres} ${u.apellidos}` : u.name}
                   </td>
+                  <td>{u.correo || u.email}</td>
+                  <td>{u.dni}</td>
                   <td>
-                    <span style={{ 
-                      backgroundColor: '#f1f5f9', 
-                      padding: '4px 10px', 
-                      borderRadius: '6px', 
-                      fontSize: '0.85rem', 
-                      color: '#475569', 
-                      fontWeight: 600,
-                      textTransform: 'capitalize'
-                    }}>
-                      {u.role || 'ciudadano'}
+                    <span className={`badge ${u.rol === 'administrador' ? 'admin' : 'user'}`}>
+                      {u.rol}
                     </span>
-                  </td>
-                  <td>
-                    <span style={{ 
-                      padding: '4px 10px', 
-                      borderRadius: '20px', 
-                      fontSize: '0.8rem', 
-                      fontWeight: 700, 
-                      backgroundColor: u.status === 'active' ? '#dcfce7' : '#fee2e2', 
-                      color: u.status === 'active' ? '#166534' : '#991b1b' 
-                    }}>
-                      {u.status === 'active' ? 'Activo' : 'Inactivo'}
-                    </span>
-                  </td>
-                  <td style={{ textAlign: 'right' }}>
-                    <button 
-                      onClick={() => openModal('user', 'edit', u)} 
-                      className="action-btn edit"
-                    >
-                      Editar
-                    </button>
-                    <button 
-                      onClick={() => openModal('delete', 'user', u)} 
-                      className="action-btn delete"
-                    >
-                      Eliminar
-                    </button>
                   </td>
                 </tr>
               ))}
