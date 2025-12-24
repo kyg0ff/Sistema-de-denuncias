@@ -142,26 +142,22 @@ function App() {
   // Envía la nueva denuncia al servidor adjuntando el ID del usuario si está logueado
   const handleCreateReport = async (reportData) => {
     try {
-      const complaintData = {
-        ...reportData,
-        userId: user ? user.id : null
-      };
-      
-      const response = await complaintsService.create(complaintData);
+      // YA NO HACEMOS reportData.append('usuario_id'...) AQUÍ 
+      // porque CreateReport.jsx ya lo incluyó en el FormData.
+
+      const response = await complaintsService.create(reportData);
       
       if (response.success) {
         return {
           success: true,
-          trackingCode: response.data.trackingCode,
-          complaintId: response.data.id
+          trackingCode: response.data?.codigo_seguimiento || response.trackingCode,
+          complaintId: response.data?.id || response.complaintId
         };
       }
+      return response;
     } catch (error) {
       console.error('Error creando reporte:', error);
-      return { 
-        success: false, 
-        error: error.message || 'Error al crear el reporte' 
-      };
+      return { success: false, error: error.message };
     }
   };
 

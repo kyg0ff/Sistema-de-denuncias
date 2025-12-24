@@ -14,6 +14,7 @@ router.get('/statistics', isAdmin, adminController.getStatistics);
 
 // Usuarios
 router.get('/users', isAdmin, adminController.getAllUsers);
+router.post('/users', adminController.createUser);
 router.put('/users/:id', isAdmin, adminController.updateUser);
 router.delete('/users/:id', isAdmin, adminController.deleteUser);
 
@@ -23,6 +24,7 @@ router.post('/organizations', isAdmin, adminController.createOrganization);
 
 // Autoridades
 router.get('/authorities', isAdmin, adminController.getAuthorities);
+router.get('/authorities/available', isAdmin, adminController.getAvailableAuthorities);
 router.get('/organizations/:orgId/authorities', isAdmin, adminController.getAuthoritiesByOrg);
 router.post('/authorities', isAdmin, adminController.createAuthority);
 router.put('/authorities/:id', isAdmin, adminController.updateAuthority);

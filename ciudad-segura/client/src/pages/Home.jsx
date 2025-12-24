@@ -8,28 +8,22 @@ import { statsService, complaintsService } from '../services/api';
 
 /**
  * COMPONENTE HOME: Página de aterrizaje principal
- * Props:
- * - onCreateReport: Función para abrir el formulario de nueva denuncia.
- * - onViewDetails: Función para navegar al detalle de una denuncia específica.
- * - onViewAll: Función para ver el listado completo de denuncias.
+ * Corregido para estandarizar los datos del backend con el diseño del frontend.
  */
 export default function Home({ onCreateReport, onViewDetails, onViewAll }) {
   // --- ESTADOS DE LA PÁGINA ---
   const [recentComplaints, setRecentComplaints] = useState([]); // Lista de las últimas denuncias
   const [homeStats, setHomeStats] = useState(null);           // Objeto con totales y contadores
   const [isLoading, setIsLoading] = useState(true);           // Control del indicador de carga
-  const [userData, setUserData] = useState(null);                     // Datos de sesión del usuario
+  const [userData, setUserData] = useState(null);             // Datos de sesión del usuario
 
   /**
    * EFECTO DE INICIALIZACIÓN:
-   * 1. Recupera la sesión del usuario guardada en el navegador (Persistence).
-   * 2. Llama a la carga de datos del servidor.
    */
   useEffect(() => {
     const savedUser = localStorage.getItem('userData');
     if (savedUser) {
       try {
-        // Convertimos el string de localStorage de vuelta a un objeto JS
         setUserData(JSON.parse(savedUser));
       } catch (e) {
         console.error("Error al parsear usuario", e);
@@ -40,60 +34,63 @@ export default function Home({ onCreateReport, onViewDetails, onViewAll }) {
 
   /**
    * CARGA DE DATOS:
-   * Utiliza Promise.all para disparar dos peticiones al mismo tiempo (Paralelismo),
-   * optimizando el tiempo de carga total.
+   * Realiza la transformación para que los nombres del Backend (Postgres)
+   * coincidan con lo que espera el componente visual.
    */
   const loadHomeData = async () => {
     setIsLoading(true);
     try {
       // statsService trae totales y complaintsService trae la lista general
       const [statsResponse, complaintsResponse] = await Promise.all([
-        statsService.getHomeStats(),
+        statsService.getHomeStats().catch(() => ({ success: false })), // Catch preventivo
         complaintsService.getAll()
       ]);
 
+      // 1. Manejo de Estadísticas
       if (statsResponse.success) {
         setHomeStats(statsResponse.data);
-        
-        // --- TRANSFORMACIÓN DE DATOS (DATA MAPPING) ---
-        // Si el backend envía denuncias recientes, las preparamos para el componente ComplaintCard
-        if (statsResponse.data.recentComplaints) {
-          const transformedComplaints = statsResponse.data.recentComplaints.map(complaint => {
-            // Diccionario para traducir estados técnicos a lenguaje humano
-            const statusMap = {
-              'pendiente': 'Pendiente',
-              'en_revision': 'En Revisión',
-              'resuelto': 'Resuelta',
-              'urgente': 'Urgente'
-            };
+      }
 
-            // Retornamos un objeto estandarizado (Normalización)
-            // Esto permite que el componente funcione aunque los nombres de campos en la DB cambien
-            return {
-              id: complaint.id,
-              category: complaint.categoria || complaint.category, 
-              title: complaint.titulo || complaint.title || `Denuncia ${complaint.codigo_seguimiento}`,
-              status: statusMap[complaint.estado || complaint.status] || 'Pendiente',
-              location: complaint.ubicacion || complaint.location || 'Sin ubicación',
-              createdAt: complaint.fecha_creacion || complaint.createdAt,
-              // Asignamos una imagen representativa según la categoría
-              img: getCategoryImage(complaint.categoria || complaint.category)
-            };
-          });
-          setRecentComplaints(transformedComplaints);
-        }
+      // 2. Manejo de Denuncias Reales (Transformación de Datos)
+      if (complaintsResponse.success) {
+        // Tomamos solo las 6 más recientes para el Home
+        const rawData = complaintsResponse.data.slice(0, 3); // numero de DENUNICIAS QUE APAREZCAN EN EL HOME
+
+        const transformed = rawData.map(complaint => {
+          // Diccionario para traducir estados técnicos del backend a visuales
+          const statusMap = {
+            'pendiente': 'Urgente',
+            'en_revision': 'En Revisión',
+            'resuelto': 'Resuelta',
+            'urgente': 'Urgente'
+          };
+
+          // Retornamos un objeto estandarizado
+          return {
+            ...complaint, // Mantenemos ID, evidencias, etc.
+            id: complaint.id,
+            // Normalizamos campos para el ComplaintCard
+            category: complaint.categoria, 
+            title: complaint.titulo || `Reporte #${complaint.id}`,
+            status: statusMap[complaint.estado] || 'Pendiente',
+            // La ubicación la pasamos tal cual (el Card ya sabe manejar el objeto)
+            location: complaint.ubicacion, 
+            // Imagen de respaldo si no hay evidencias subidas
+            img: getCategoryImage(complaint.categoria)
+          };
+        });
+
+        setRecentComplaints(transformed);
       }
     } catch (error) {
       console.error('Error cargando datos del home:', error);
-      // Aquí se podrían setear datos "Mock" (de prueba) en caso de error
     } finally {
-      setIsLoading(false); // Apagamos el spinner de carga
+      setIsLoading(false);
     }
   };
 
   /**
-   * HELPER: Selector de Imágenes
-   * Asocia una categoría con una URL de imagen real (Unsplash) para mejorar el diseño.
+   * HELPER: Selector de Imágenes (Fallback)
    */
   const getCategoryImage = (category) => {
     const images = {
@@ -103,13 +100,12 @@ export default function Home({ onCreateReport, onViewDetails, onViewAll }) {
       'accesos': 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=800',
       'conducta': 'https://images.unsplash.com/photo-1549924231-f129b911e442?q=80&w=800'
     };
-    // Imagen por defecto en caso de que la categoría no coincida
-    return images[category] || 'https://www.auto-tecnica.es/wp-content/uploads/2022/08/barrio-de-torrero-la-paz-1080x630.jpeg';
+    return images[category] || 'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?q=80&w=800';
   };
 
   return (
     <main>
-      {/* SECCIÓN HERO: Bienvenida y llamadas a la acción (Call to Action) */}
+      {/* SECCIÓN HERO */}
       <div className="container">
         <Hero onCreateReport={onCreateReport} onViewAll={onViewAll} userData={userData} />
       </div>
@@ -120,37 +116,41 @@ export default function Home({ onCreateReport, onViewDetails, onViewAll }) {
           <h2 style={{ fontSize: '2rem', margin: '0 0 8px 0', fontWeight: 800 }}>Denuncias Recientes</h2>
           <p style={{ margin: 0, color: 'var(--text-muted)' }}>
             Mira lo que está reportando tu comunidad en tiempo real.
-            {/* Si ya cargaron las estadísticas, mostramos el total dinámico */}
-            {homeStats && ` Total: ${homeStats.totalComplaints} denuncias`}
+            {homeStats && ` Total: ${homeStats.totalComplaints || 0} denuncias`}
           </p>
         </div>
         
-        {/* RENDERIZADO CONDICIONAL: Spinner de carga vs Cuadrícula de tarjetas */}
+        {/* RENDERIZADO CONDICIONAL */}
         {isLoading ? (
-          <div style={{ textAlign: 'center', padding: '40px' }}>
+          <div style={{ textAlign: 'center', padding: '60px' }}>
             <div style={{ 
               width: '40px', height: '40px', margin: '0 auto 20px',
-              border: '3px solid var(--light-gray)', borderTopColor: 'var(--medium-blue)',
+              border: '3px solid #e2e8f0', borderTopColor: 'var(--vibrant-blue)',
               borderRadius: '50%', animation: 'spin 1s linear infinite'
             }}></div>
-            <p style={{ color: 'var(--text-muted)' }}>Cargando denuncias...</p>
-            {/* Keyframes de animación inyectados para el spinner */}
+            <p style={{ color: 'var(--text-muted)', fontWeight: 500 }}>Sincronizando con la ciudad...</p>
             <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
           </div>
         ) : (
           <div className="cards-grid">
-            {recentComplaints.map(item => (
-              <ComplaintCard 
-                key={item.id} 
-                item={item} 
-                onClick={() => onViewDetails(item.id)} 
-              />
-            ))}
+            {recentComplaints.length > 0 ? (
+              recentComplaints.map(item => (
+                <ComplaintCard 
+                  key={item.id} 
+                  item={item} 
+                  onClick={() => onViewDetails(item.id)} 
+                />
+              ))
+            ) : (
+              <p style={{ textAlign: 'center', gridColumn: '1/-1', padding: '40px', color: 'var(--text-muted)' }}>
+                No hay denuncias recientes para mostrar.
+              </p>
+            )}
           </div>
         )}
       </section>
 
-      {/* SECCIÓN DE ESTADÍSTICAS: Panel inferior con números generales */}
+      {/* SECCIÓN DE ESTADÍSTICAS */}
       <div className="container" style={{ paddingTop: '40px' }}>
         <Stats homeStats={homeStats} />
       </div>

@@ -6,28 +6,39 @@ const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 // Función helper para hacer fetch
+/**
+ * Función helper para hacer peticiones fetch de forma centralizada.
+ * Maneja automáticamente el Content-Type según el tipo de datos enviados.
+ */
 export const apiRequest = async (endpoint, options = {}) => {
   const url = `${API_BASE_URL}${endpoint}`;
 
-  const defaultHeaders = {
-    'Content-Type': 'application/json',
-  };
+  // 1. Copiamos las cabeceras que vengan en las opciones (como Authorization si lo usas)
+  const headers = { ...options.headers };
+
+  // 2. LÓGICA CRÍTICA: 
+  // - Si el body es un FormData (cuando subes archivos), NO debemos poner Content-Type.
+  //   El navegador lo pondrá automáticamente como 'multipart/form-data' con un "boundary" único.
+  // - Si el body NO es FormData y existe, le ponemos 'application/json'.
+  if (options.body && !(options.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+  }
 
   const config = {
     ...options,
-    headers: {
-      ...defaultHeaders,
-      ...options.headers,
-    },
+    headers: headers,
   };
 
   try {
     const response = await fetch(url, config);
 
+    // Si la respuesta no es 2xx, intentamos leer el error del servidor
     if (!response.ok) {
-      throw new Error(`Error ${response.status}: ${response.statusText}`);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
     }
 
+    // Retornamos la respuesta ya convertida a objeto JS
     return await response.json();
   } catch (error) {
     console.error('API Request Error:', error);
@@ -62,13 +73,27 @@ export const complaintsService = {
 
   getById: (id) => apiRequest(`/complaints/${id}`),
 
-  create: (complaintData) =>
-    apiRequest('/complaints', {
-      method: 'POST',
-      body: JSON.stringify(complaintData),
-    }),
+  // MODIFICADO: Ahora recibe FormData para soportar imágenes y videos
+  create: (formData) => {
+    // Usamos la URL base definida al inicio de tu archivo api.js
+    const url = `${API_BASE_URL}/complaints`;
 
-  // Nuevo: Obtener denuncias por usuario
+    return fetch(url, {
+      method: 'POST',
+      body: formData,
+      // IMPORTANTE: No definimos 'Content-Type' aquí. 
+      // Al pasar un objeto FormData, el navegador lo hace por nosotros
+      // incluyendo el "boundary" necesario para que el servidor procese los archivos.
+    }).then(async (response) => {
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
+      }
+      return await response.json();
+    });
+  },
+
+  // Obtener denuncias por usuario
   getByUser: (userId) =>
     apiRequest(`/complaints/user/${userId}`),
 };
@@ -128,11 +153,18 @@ export const notificationsService = {
 // =====================
 
 export const adminService = {
-  // Estadísticas
+  // --- ESTADÍSTICAS ---
   getStatistics: () => apiRequest('/admin/statistics'),
 
-  // Usuarios
+  // --- USUARIOS ---
   getUsers: () => apiRequest('/admin/users'),
+
+  // 1. AGREGADO: Esta función es la que te está dando el error actual
+  createUser: (userData) => 
+    apiRequest('/admin/users', {
+      method: 'POST',
+      body: JSON.stringify(userData),
+    }),
 
   updateUser: (userId, updates) =>
     apiRequest(`/admin/users/${userId}`, {
@@ -145,7 +177,7 @@ export const adminService = {
       method: 'DELETE',
     }),
 
-  // Organizaciones
+  // --- ORGANIZACIONES ---
   getOrganizations: () => apiRequest('/admin/organizations'),
 
   createOrganization: (orgData) =>
@@ -154,17 +186,25 @@ export const adminService = {
       body: JSON.stringify(orgData),
     }),
 
-  // Autoridades
+  // --- AUTORIDADES ---
   getAuthorities: () => apiRequest('/admin/authorities'),
 
   getAuthoritiesByOrg: (orgId) =>
     apiRequest(`/admin/organizations/${orgId}/authorities`),
 
+  getAvailableAuthorities: () => 
+    apiRequest('/admin/authorities/available'),
+
+  // 2. SOLUCIÓN DE NOMBRE: Definimos createAuthority y le creamos un alias
   createAuthority: (authData) =>
     apiRequest('/admin/authorities', {
       method: 'POST',
       body: JSON.stringify(authData),
     }),
+
+  // Creamos el alias 'assignAuthority' para que coincida con tu AdminDashboard.jsx
+  assignAuthority: (authData) => 
+    adminService.createAuthority(authData),
 
   updateAuthority: (authId, updates) =>
     apiRequest(`/admin/authorities/${authId}`, {

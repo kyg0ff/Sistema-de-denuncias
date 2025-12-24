@@ -2,6 +2,9 @@ const User = require('../models/User');
 const Complaint = require('../models/Complaint');
 const Organization = require('../models/Organization');
 
+const pool = require('../db'); // Asegúrate de que la ruta sea correcta
+const bcrypt = require('bcrypt');
+
 // =====================
 // Estadísticas
 // =====================
@@ -57,6 +60,37 @@ exports.getStatistics = async (req, res) => {
 // =====================
 // Usuarios
 // =====================
+exports.createUser = async (req, res) => {
+  try {
+    const { dni, nombres, apellidos, correo, contraseña_hash, rol, telefono } = req.body;
+
+    // 1. Encriptar la contraseña
+    const salt = await bcrypt.genSalt(10);
+    const hash = await bcrypt.hash(contraseña_hash, salt);
+
+    // 2. Insertar en la base de datos usando pool directamente
+    // Usamos los nombres exactos de tus columnas SQL
+    const result = await pool.query(
+      `INSERT INTO usuarios (dni, nombres, apellidos, correo, contraseña_hash, rol, telefono, estado) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'activo') 
+       RETURNING id, dni, nombres, apellidos, correo, rol, estado`,
+      [dni, nombres, apellidos, correo, hash, rol, telefono]
+    );
+
+    res.status(201).json({ 
+      success: true, 
+      message: 'Usuario creado exitosamente',
+      data: result.rows[0] 
+    });
+  } catch (error) {
+    console.error('Error al crear usuario:', error);
+    // Manejo de error por si el correo o DNI ya existen
+    if (error.code === '23505') {
+      return res.status(400).json({ success: false, message: 'El correo o DNI ya están registrados' });
+    }
+    res.status(500).json({ success: false, message: 'Error interno al crear usuario' });
+  }
+};
 
 exports.getAllUsers = async (req, res) => {
   try {
@@ -73,26 +107,43 @@ exports.getAllUsers = async (req, res) => {
 exports.updateUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const updates = req.body;
+    // Extraemos los campos exactos que vienen del formulario del Dashboard
+    const { nombres, apellidos, dni, correo, telefono, rol, estado } = req.body;
 
-    const updatedUser = await User.update(parseInt(id), updates);
+    // Ejecutamos el UPDATE directamente en SQL
+    const result = await pool.query(
+      `UPDATE usuarios 
+       SET nombres = $1, 
+           apellidos = $2, 
+           dni = $3, 
+           correo = $4, 
+           telefono = $5, 
+           rol = $6, 
+           estado = $7 
+       WHERE id = $8 
+       RETURNING id, dni, nombres, apellidos, correo, rol, estado`,
+      [nombres, apellidos, dni, correo, telefono, rol, estado, id]
+    );
 
-    if (!updatedUser) {
-      return res
-        .status(404)
-        .json({ success: false, message: 'Usuario no encontrado' });
+    if (result.rows.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Usuario no encontrado' 
+      });
     }
 
+    // Devolvemos el usuario actualizado para que el Frontend refresque la tabla
     res.json({
       success: true,
-      message: 'Usuario actualizado',
-      data: updatedUser,
+      message: 'Usuario actualizado correctamente',
+      data: result.rows[0],
     });
   } catch (error) {
     console.error('Error al actualizar usuario:', error);
-    res
-      .status(500)
-      .json({ success: false, message: 'Error al actualizar usuario' });
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error interno al actualizar usuario' 
+    });
   }
 };
 
@@ -100,24 +151,24 @@ exports.deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Soft-delete: cambiar estado a 'eliminado'
-    const updated = await User.update(parseInt(id), { estado: 'eliminado' });
+    // Usamos 'inactivo' para que coincida con tu lógica de Login/Dashboard
+    const result = await pool.query(
+      "UPDATE usuarios SET estado = 'inactivo' WHERE id = $1 RETURNING id, nombres, estado",
+      [id]
+    );
 
-    if (!updated) {
-      return res
-        .status(404)
-        .json({ success: false, message: 'Usuario no encontrado' });
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
     }
 
     res.json({
       success: true,
-      message: 'Usuario marcado como eliminado',
+      message: 'El usuario ha sido desactivado (Baja lógica)',
+      data: result.rows[0]
     });
   } catch (error) {
-    console.error('Error al eliminar usuario:', error);
-    res
-      .status(500)
-      .json({ success: false, message: 'Error al eliminar usuario' });
+    console.error('Error en deleteUser:', error);
+    res.status(500).json({ success: false, message: 'Error al procesar la baja' });
   }
 };
 
@@ -250,5 +301,22 @@ exports.deleteAuthority = async (req, res) => {
     res
       .status(500)
       .json({ success: false, message: 'Error al eliminar autoridad' });
+  }
+};
+
+exports.getAvailableAuthorities = async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT u.id, u.nombres, u.apellidos, u.dni, u.correo
+      FROM usuarios u
+      WHERE u.rol = 'autoridad' 
+      AND u.estado = 'activo'
+      AND u.id NOT IN (SELECT usuario_id FROM autoridades_detalle)
+    `);
+
+    res.json({ success: true, data: result.rows });
+  } catch (error) {
+    console.error('Error al obtener autoridades disponibles:', error);
+    res.status(500).json({ success: false, message: 'Error al filtrar autoridades' });
   }
 };

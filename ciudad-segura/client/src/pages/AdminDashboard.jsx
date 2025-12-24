@@ -6,28 +6,29 @@ import AdminModal from '../components/AdminModal';
 import { adminService } from '../services/api';
 
 /**
- * DASHBOARD DE ADMINISTRACIÓN - Versión sincronizada con DB ciudad_segura
+ * DASHBOARD DE ADMINISTRACIÓN - Versión Completa con Estilos y Lógica Sincronizada
  */
 export default function AdminDashboard({ onLogout }) {
-  // --- 1. ESTADOS DE DATOS (Mapeados a tablas de la DB) ---
-  const [users, setUsers] = useState([]);         // Tabla: usuarios
-  const [orgs, setOrgs] = useState([]);           // Tabla: organizaciones
-  const [authorities, setAuthorities] = useState([]); // Tabla: autoridades_detalle + usuarios
-  const [statistics, setStatistics] = useState(null); // Basado en vista_estadisticas y conteos
+  // --- 1. ESTADOS DE DATOS ---
+  const [users, setUsers] = useState([]);         
+  const [orgs, setOrgs] = useState([]);           
+  const [authorities, setAuthorities] = useState([]); 
+  const [statistics, setStatistics] = useState(null); 
+  const [availablePersonnel, setAvailablePersonnel] = useState([]); // Para el filtro de asignación
   
   // --- 2. ESTADOS DE NAVEGACIÓN Y UI ---
   const [activeTab, setActiveTab] = useState('users'); 
-  const [selectedOrg, setSelectedOrg] = useState(null); // Controla la vista de personal de una organización
+  const [selectedOrg, setSelectedOrg] = useState(null); 
   const [isLoading, setIsLoading] = useState(true);
 
   // --- 3. ESTADOS DE GESTIÓN (MODALES) ---
-  const [modalType, setModalType] = useState(null);   // 'user', 'auth', 'org', 'delete'
-  const [modalMode, setModalMode] = useState('add');  // 'add' o 'edit'
-  const [currentItem, setCurrentItem] = useState(null); // Fila seleccionada para editar/borrar
+  const [modalType, setModalType] = useState(null);   
+  const [modalMode, setModalMode] = useState('add');  
+  const [currentItem, setCurrentItem] = useState(null); 
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const [formData, setFormData] = useState({});       // Datos que viajan al backend
+  const [formData, setFormData] = useState({});       
 
-  // --- 4. ESTADOS DE FEEDBACK ---
+  // --- 4. FEEDBACK ---
   const [successModalOpen, setSuccessModalOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
 
@@ -36,26 +37,20 @@ export default function AdminDashboard({ onLogout }) {
     loadInitialData();
   }, []);
 
-  // Recarga automática de autoridades cuando se selecciona una organización específica
   useEffect(() => {
     if (selectedOrg) {
       loadAuthoritiesByOrg(selectedOrg.id);
     }
   }, [selectedOrg]);
 
-  /**
-   * Carga inicial de datos desde el servidor
-   */
   const loadInitialData = async () => {
     setIsLoading(true);
     try {
-      // Llamadas paralelas para optimizar velocidad
       const [statsRes, usersRes, orgsRes] = await Promise.all([
         adminService.getStatistics(),
         adminService.getUsers(),
         adminService.getOrganizations()
       ]);
-
       if (statsRes.success) setStatistics(statsRes.data);
       if (usersRes.success) setUsers(usersRes.data);
       if (orgsRes.success) setOrgs(orgsRes.data);
@@ -66,52 +61,38 @@ export default function AdminDashboard({ onLogout }) {
     }
   };
 
-  /**
-   * Carga personal de una organización (JOIN entre usuarios y autoridades_detalle)
-   */
   const loadAuthoritiesByOrg = async (orgId) => {
     try {
       const response = await adminService.getAuthoritiesByOrg(orgId);
-      if (response.success) {
-        setAuthorities(response.data);
-      }
+      if (response.success) setAuthorities(response.data);
     } catch (error) {
       console.error('Error cargando autoridades:', error);
     }
   };
 
   // --- MANEJO DE MODALES ---
-  const openModal = (type, mode, item = null) => {
+  const openModal = async (type, mode, item = null) => {
     setModalType(type);
     setModalMode(mode);
     setCurrentItem(item);
     
-    // Inicialización de formularios según campos de la DB SQL
     if (type === 'user') {
       setFormData(item || {
-        dni: '',
-        nombres: '',
-        apellidos: '',
-        correo: '',
-        telefono: '',
-        contraseña_hash: '', // Mapeado a la tabla usuarios
-        rol: 'ciudadano',     // Valor de Enum rol_usuario
-        estado: 'activo'
+        dni: '', nombres: '', apellidos: '', correo: '', telefono: '', 
+        contraseña_hash: '', rol: 'ciudadano', estado: 'activo'
       });
     } else if (type === 'auth') {
-      // Para autoridades_detalle
-      setFormData(item || { 
-        usuario_id: '', 
-        organizacion_id: selectedOrg?.id, 
-        cargo: '' 
-      });
+      // Cargamos solo autoridades "libres" para el selector
+      try {
+        const response = await adminService.getAvailableAuthorities();
+        if (response.success) setAvailablePersonnel(response.data);
+      } catch (e) { console.error("Error al cargar disponibles"); }
+      
+      setFormData({ usuario_id: '', organizacion_id: selectedOrg?.id, cargo: '' });
     } else if (type === 'org') {
-      // Para tabla organizaciones
       setFormData(item || {
-        nombre: '',
-        correo_contacto: '',
-        numero_contacto: '',
-        ubicacion: { lat: -13.5167, lng: -71.9781 } // Default Cusco (JSONB)
+        nombre: '', correo_contacto: '', numero_contacto: '',
+        ubicacion: { lat: -13.5167, lng: -71.9781 }
       });
     } else if (type === 'delete') {
       setDeleteTarget(mode);
@@ -119,10 +100,7 @@ export default function AdminDashboard({ onLogout }) {
   };
 
   const closeModal = () => { 
-    setModalType(null); 
-    setFormData({}); 
-    setCurrentItem(null); 
-    setDeleteTarget(null);
+    setModalType(null); setFormData({}); setCurrentItem(null); setDeleteTarget(null);
   };
 
   const showSuccess = (message) => {
@@ -130,88 +108,58 @@ export default function AdminDashboard({ onLogout }) {
     setSuccessModalOpen(true);
   };
 
-  // --- OPERACIONES CRUD ---
-
-  /**
-   * Guarda o actualiza registros según el tipo de entidad
-   */
+  // --- OPERACIONES ---
   const handleSave = async (e) => {
     e.preventDefault();
     try {
-      // GESTIÓN DE USUARIOS
       if (modalType === 'user') {
         if (modalMode === 'add') {
-          const response = await adminService.createUser(formData);
-          if (response.success) {
-            setUsers([...users, response.data]);
-            showSuccess('Usuario creado correctamente');
-          }
+          const res = await adminService.createUser(formData);
+          if (res.success) { setUsers([...users, res.data]); showSuccess('Usuario creado'); }
         } else {
-          const response = await adminService.updateUser(currentItem.id, formData);
-          if (response.success) {
-            setUsers(users.map(u => u.id === currentItem.id ? response.data : u));
+          const res = await adminService.updateUser(currentItem.id, formData);
+          if (res.success) {
+            setUsers(users.map(u => u.id === currentItem.id ? res.data : u));
             showSuccess('Usuario actualizado');
           }
         }
+      } else if (modalType === 'auth') {
+        const res = await adminService.assignAuthority(formData);
+        if (res.success) { loadAuthoritiesByOrg(selectedOrg.id); showSuccess('Personal asignado'); }
+      } else if (modalType === 'org') {
+        const res = await adminService.createOrganization(formData);
+        if (res.success) { setOrgs([...orgs, res.data]); showSuccess('Organización creada'); }
       }
-      // GESTIÓN DE ORGANIZACIONES
-      else if (modalType === 'org') {
-        if (modalMode === 'add') {
-          const response = await adminService.createOrganization(formData);
-          if (response.success) {
-            setOrgs([...orgs, response.data]);
-            showSuccess('Organización registrada');
-          }
-        }
-      }
-      // ASIGNACIÓN DE AUTORIDAD (Tabla autoridades_detalle)
-      else if (modalType === 'auth') {
-        const response = await adminService.assignAuthority(formData);
-        if (response.success) {
-          loadAuthoritiesByOrg(selectedOrg.id); // Refrescar lista local
-          showSuccess('Autoridad asignada con éxito');
-        }
-      }
-      
       closeModal();
-      loadInitialData(); // Actualizar estadísticas globales
-    } catch (error) {
-      alert('Error en el servidor: ' + error.message);
-    }
+      loadInitialData();
+    } catch (error) { alert('Error: ' + error.message); }
   };
 
-  /**
-   * Ejecuta eliminaciones físicas (autoridades) o lógicas (usuarios)
-   */
+  const handleToggleStatus = async (user, newStatus) => {
+    try {
+      const res = await adminService.updateUser(user.id, { ...user, estado: newStatus });
+      if (res.success) {
+        setUsers(users.map(u => u.id === user.id ? res.data : u));
+        showSuccess(`Usuario ${newStatus === 'activo' ? 'activado' : 'desactivado'}`);
+      }
+    } catch (e) { alert('Error al cambiar estado'); }
+  };
+
   const handleDelete = async () => {
     try {
       if (deleteTarget === 'user') {
-        // En usuarios hacemos un update a estado='inactivo' (Borrado Lógico)
-        const response = await adminService.updateUser(currentItem.id, { estado: 'inactivo' });
-        if (response.success) {
+        const res = await adminService.deleteUser(currentItem.id);
+        if (res.success) {
           setUsers(users.map(u => u.id === currentItem.id ? { ...u, estado: 'inactivo' } : u));
-          showSuccess('El usuario ha sido desactivado');
-        }
-      }
-      if (deleteTarget === 'auth') {
-        // En autoridades eliminamos el vínculo en autoridades_detalle
-        const response = await adminService.deleteAuthority(currentItem.usuario_id);
-        if (response.success) {
-          setAuthorities(authorities.filter(a => a.usuario_id !== currentItem.usuario_id));
-          showSuccess('Personal removido de la organización');
+          showSuccess('Usuario desactivado');
         }
       }
       closeModal();
-    } catch (error) {
-      alert('No se pudo completar la eliminación');
-    }
+    } catch (e) { alert('No se pudo completar la acción'); }
   };
 
-  // --- RENDERIZADO DE TABLAS ---
+  // --- RENDERS CON ESTILOS COMPLETOS ---
 
-  /**
-   * Renderiza la tabla de usuarios (Sincronizada con tabla 'usuarios')
-   */
   const renderUsers = () => (
     <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
       <div className="flex-between" style={{ marginBottom: '24px' }}>
@@ -224,41 +172,41 @@ export default function AdminDashboard({ onLogout }) {
         </Button>
       </div>
       
-      <div style={{ backgroundColor: 'white', borderRadius: '16px', border: '1px solid var(--border)', overflow: 'hidden' }}>
+      <div style={{ backgroundColor: 'white', borderRadius: '16px', border: '1px solid var(--border)', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
         <table className="admin-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
-            <tr>
-              <th>Nombre y Apellidos</th>
+            <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid var(--border)' }}>
+              <th style={{ padding: '16px', textAlign: 'left' }}>Nombre y Apellidos</th>
               <th>DNI</th>
               <th>Correo</th>
               <th>Rol</th>
               <th>Estado</th>
-              <th style={{ textAlign: 'right' }}>Acciones</th>
+              <th style={{ textAlign: 'right', paddingRight: '24px' }}>Acciones</th>
             </tr>
           </thead>
           <tbody>
             {users.map((u) => (
-              <tr key={u.id}>
-                <td style={{ fontWeight: 600 }}>{`${u.nombres} ${u.apellidos}`}</td>
+              <tr key={u.id} style={{ borderBottom: '1px solid #f1f5f9', opacity: u.estado === 'inactivo' ? 0.7 : 1 }}>
+                <td style={{ padding: '16px', fontWeight: 600 }}>{`${u.nombres} ${u.apellidos}`}</td>
                 <td>{u.dni}</td>
                 <td>{u.correo}</td>
-                <td>
-                  <span className={`badge ${u.rol}`}>
-                    {u.rol.toUpperCase()}
-                  </span>
-                </td>
+                <td><span className={`badge ${u.rol}`}>{u.rol.toUpperCase()}</span></td>
                 <td>
                   <span style={{ 
-                    padding: '4px 8px', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 800,
+                    padding: '4px 10px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: 800,
                     backgroundColor: u.estado === 'activo' ? '#dcfce7' : '#fee2e2',
                     color: u.estado === 'activo' ? '#166534' : '#991b1b'
                   }}>
                     {u.estado ? u.estado.toUpperCase() : 'ACTIVO'}
                   </span>
                 </td>
-                <td style={{ textAlign: 'right' }}>
-                  <button onClick={() => openModal('user', 'edit', u)} style={{ marginRight: '8px', color: '#4f46e5', background: 'none', border: 'none', cursor: 'pointer' }}>Editar</button>
-                  <button onClick={() => openModal('delete', 'user', u)} style={{ color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer' }}>Baja</button>
+                <td style={{ textAlign: 'right', paddingRight: '24px' }}>
+                  <button onClick={() => openModal('user', 'edit', u)} style={{ marginRight: '12px', color: '#4f46e5', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500 }}>Editar</button>
+                  {u.estado === 'inactivo' ? (
+                    <button onClick={() => handleToggleStatus(u, 'activo')} style={{ color: '#059669', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700 }}>Reactivar</button>
+                  ) : (
+                    <button onClick={() => openModal('delete', 'user', u)} style={{ color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer' }}>Baja</button>
+                  )}
                 </td>
               </tr>
             ))}
@@ -268,75 +216,65 @@ export default function AdminDashboard({ onLogout }) {
     </div>
   );
 
-  /**
-   * Renderiza lista de organizaciones (Sincronizada con tabla 'organizaciones')
-   */
   const renderOrgList = () => (
     <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
       <div className="flex-between" style={{ marginBottom: '24px' }}>
         <div>
           <h2 style={{ fontSize: '1.5rem', color: 'var(--deep-blue)', fontWeight: 700 }}>Entidades del Sistema</h2>
-          <p style={{ color: 'var(--text-muted)' }}>Comisarías, Serenazgo y otras entidades registradas.</p>
+          <p style={{ color: 'var(--text-muted)' }}>Organizaciones vinculadas a la seguridad ciudadana.</p>
         </div>
-        <Button onClick={() => openModal('org', 'add')} style={{ backgroundColor: 'var(--vibrant-blue)', color: 'white' }}>
-          + Nueva Organización
-        </Button>
+        <Button onClick={() => openModal('org', 'add')} style={{ backgroundColor: 'var(--vibrant-blue)', color: 'white' }}>+ Nueva Organización</Button>
       </div>
       
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
         {orgs.map(org => (
-          <div key={org.id} onClick={() => setSelectedOrg(org)} className="card-hover-effect" style={{ backgroundColor: 'white', borderRadius: '16px', border: '1px solid var(--border)', padding: '24px', cursor: 'pointer' }}>
+          <div key={org.id} onClick={() => setSelectedOrg(org)} className="card-hover-effect" style={{ backgroundColor: 'white', borderRadius: '16px', border: '1px solid var(--border)', padding: '24px', cursor: 'pointer', transition: 'all 0.2s' }}>
             <div style={{ width: '48px', height: '48px', backgroundColor: '#e0e7ff', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4f46e5', marginBottom: '16px' }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 21h18v-8a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8z"></path><path d="M12 2L3 7v3h18V7L12 2z"></path></svg>
             </div>
-            <h3 style={{ margin: '0 0 4px 0' }}>{org.nombre}</h3>
+            <h3 style={{ margin: '0 0 4px 0', color: 'var(--deep-blue)' }}>{org.nombre}</h3>
             <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>{org.correo_contacto}</p>
-            <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #f1f5f9', fontSize: '0.8rem', color: '#64748b' }}>
-              Click para ver personal asignado
-            </div>
+            <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #f1f5f9', fontSize: '0.8rem', color: '#4f46e5', fontWeight: 600 }}>Ver personal asignado →</div>
           </div>
         ))}
       </div>
     </div>
   );
 
-  /**
-   * Renderiza detalle de personal (JOIN entre usuarios y autoridades_detalle)
-   */
   const renderOrgDetails = () => (
     <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
-      <button onClick={() => setSelectedOrg(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-        ← Volver a Organizaciones
+      <button onClick={() => setSelectedOrg(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 500 }}>
+        ← Volver a Entidades
       </button>
-      <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '32px', border: '1px solid var(--border)' }}>
-        <div className="flex-between" style={{ marginBottom: '24px' }}>
+      <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '32px', border: '1px solid var(--border)', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)' }}>
+        <div className="flex-between" style={{ marginBottom: '32px' }}>
           <div>
-            <h2 style={{ margin: 0 }}>{selectedOrg.nombre}</h2>
-            <p style={{ color: 'var(--text-muted)' }}>Lista de personal autorizado en esta entidad.</p>
+            <h2 style={{ margin: 0, color: 'var(--deep-blue)', fontSize: '1.8rem' }}>{selectedOrg.nombre}</h2>
+            <p style={{ color: 'var(--text-muted)' }}>Personal con acceso autorizado a esta organización.</p>
           </div>
-          <Button onClick={() => openModal('auth', 'add')} style={{ border: '1px solid #e2e8f0' }}>Asignar Personal</Button>
+          <Button onClick={() => openModal('auth', 'add')} style={{ backgroundColor: 'var(--deep-blue)', color: 'white' }}>Asignar Nuevo Personal</Button>
         </div>
         
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
-            <tr style={{ textAlign: 'left', color: '#64748b', fontSize: '0.85rem' }}>
-              <th style={{ paddingBottom: '12px' }}>Personal</th>
-              <th style={{ paddingBottom: '12px' }}>Cargo</th>
-              <th style={{ paddingBottom: '12px', textAlign: 'right' }}>Acciones</th>
+            <tr style={{ textAlign: 'left', color: '#64748b', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <th style={{ paddingBottom: '16px', borderBottom: '2px solid #f1f5f9' }}>Nombre del Personal</th>
+              <th style={{ paddingBottom: '16px', borderBottom: '2px solid #f1f5f9' }}>Cargo / Función</th>
+              <th style={{ paddingBottom: '16px', borderBottom: '2px solid #f1f5f9', textAlign: 'right' }}>Estado del Vínculo</th>
             </tr>
           </thead>
           <tbody>
             {authorities.map(auth => (
-              <tr key={auth.usuario_id} style={{ borderTop: '1px solid #f1f5f9' }}>
-                <td style={{ padding: '16px 0', fontWeight: 600 }}>{auth.nombres} {auth.apellidos}</td>
-                <td>{auth.cargo}</td>
+              <tr key={auth.usuario_id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                <td style={{ padding: '20px 0', fontWeight: 600, color: '#1e293b' }}>{auth.nombres} {auth.apellidos}</td>
+                <td style={{ color: '#64748b' }}>{auth.cargo}</td>
                 <td style={{ textAlign: 'right' }}>
-                  <button onClick={() => openModal('delete', 'auth', auth)} style={{ color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer' }}>Remover</button>
+                  <span style={{ color: '#059669', fontSize: '0.75rem', fontWeight: 700, backgroundColor: '#dcfce7', padding: '4px 12px', borderRadius: '12px' }}>ACTIVO</span>
                 </td>
               </tr>
             ))}
             {authorities.length === 0 && (
-              <tr><td colSpan="3" style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>No hay personal asignado a esta entidad.</td></tr>
+              <tr><td colSpan="3" style={{ textAlign: 'center', padding: '60px', color: '#94a3b8' }}>Esta entidad aún no tiene personal asignado.</td></tr>
             )}
           </tbody>
         </table>
@@ -344,161 +282,96 @@ export default function AdminDashboard({ onLogout }) {
     </div>
   );
 
-  // --- RENDERIZADO DEL DASHBOARD ---
-
   return (
     <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f8fafc' }}>
-      
-      {/* Sidebar de navegación lateral */}
       <AdminSidebar activeTab={activeTab} setActiveTab={setActiveTab} onLogout={onLogout} resetSelection={() => setSelectedOrg(null)} />
 
       <main style={{ flex: 1, marginLeft: '280px', padding: '40px' }}>
-        
-        {/* Sección de Resumen (Visible solo en el home del dashboard) */}
         {!selectedOrg && statistics && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px', marginBottom: '40px' }}>
-            <StatCard title="Total Denuncias" value={statistics.total_denuncias} color="#4f46e5" />
-            <StatCard title="Resueltas" value={statistics.denuncias_resueltas} color="#059669" />
-            <StatCard title="Usuarios" value={users.length} color="#d97706" />
-            <StatCard title="Entidades" value={orgs.length} color="#7c3aed" />
+            <StatCard title="Total Denuncias" value={statistics.total_denuncias} color="#4f46e5" icon="📋" />
+            <StatCard title="Resueltas" value={statistics.denuncias_resueltas} color="#059669" icon="✅" />
+            <StatCard title="Usuarios" value={users.length} color="#d97706" icon="👥" />
+            <StatCard title="Entidades" value={orgs.length} color="#7c3aed" icon="🏛️" />
           </div>
         )}
 
-        {/* Cambio dinámico de contenido */}
         {activeTab === 'users' && renderUsers()}
         {activeTab === 'authorities' && (selectedOrg ? renderOrgDetails() : renderOrgList())}
       </main>
 
-      {/* MODAL 1: GESTIÓN DE USUARIOS */}
-      <AdminModal 
-        isOpen={modalType === 'user'} 
-        onClose={closeModal} 
-        title={modalMode === 'add' ? 'Registrar Usuario' : 'Editar Usuario'}
-      >
+      {/* --- MODALES --- */}
+
+      <AdminModal isOpen={modalType === 'user'} onClose={closeModal} title={modalMode === 'add' ? 'Registrar Nuevo Usuario' : 'Editar Información de Usuario'}>
         <form onSubmit={handleSave} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-          <div className="admin-input-group">
-            <label>Nombres</label>
-            <input value={formData.nombres || ''} onChange={e => setFormData({...formData, nombres: e.target.value})} required />
-          </div>
-          <div className="admin-input-group">
-            <label>Apellidos</label>
-            <input value={formData.apellidos || ''} onChange={e => setFormData({...formData, apellidos: e.target.value})} required />
-          </div>
-          <div className="admin-input-group">
-            <label>DNI</label>
-            <input value={formData.dni || ''} onChange={e => setFormData({...formData, dni: e.target.value})} required maxLength={20} />
-          </div>
-          <div className="admin-input-group">
-            <label>Correo Institucional/Personal</label>
-            <input type="email" value={formData.correo || ''} onChange={e => setFormData({...formData, correo: e.target.value})} required />
-          </div>
-          <div className="admin-input-group">
-            <label>Teléfono</label>
-            <input value={formData.telefono || ''} onChange={e => setFormData({...formData, telefono: e.target.value})} />
-          </div>
-          <div className="admin-input-group">
-            <label>Rol (Enum rol_usuario)</label>
+          <div className="admin-input-group"><label>Nombres</label><input value={formData.nombres || ''} onChange={e => setFormData({...formData, nombres: e.target.value})} required /></div>
+          <div className="admin-input-group"><label>Apellidos</label><input value={formData.apellidos || ''} onChange={e => setFormData({...formData, apellidos: e.target.value})} required /></div>
+          <div className="admin-input-group"><label>DNI</label><input value={formData.dni || ''} onChange={e => setFormData({...formData, dni: e.target.value})} required /></div>
+          <div className="admin-input-group"><label>Correo Electrónico</label><input type="email" value={formData.correo || ''} onChange={e => setFormData({...formData, correo: e.target.value})} required /></div>
+          <div className="admin-input-group"><label>Teléfono</label><input value={formData.telefono || ''} onChange={e => setFormData({...formData, telefono: e.target.value})} /></div>
+          <div className="admin-input-group"><label>Rol en el Sistema</label>
             <select value={formData.rol || 'ciudadano'} onChange={e => setFormData({...formData, rol: e.target.value})}>
-              <option value="ciudadano">ciudadano</option>
-              <option value="administrador">administrador</option>
-              <option value="autoridad">autoridad</option>
+              <option value="ciudadano">Ciudadano</option>
+              <option value="administrador">Administrador</option>
+              <option value="autoridad">Autoridad</option>
             </select>
           </div>
           {modalMode === 'add' && (
-            <div className="admin-input-group" style={{ gridColumn: 'span 2' }}>
-              <label>Contraseña (contraseña_hash)</label>
-              <input type="password" value={formData.contraseña_hash || ''} onChange={e => setFormData({...formData, contraseña_hash: e.target.value})} required />
-            </div>
+            <div className="admin-input-group" style={{ gridColumn: 'span 2' }}><label>Contraseña Inicial</label><input type="password" value={formData.contraseña_hash || ''} onChange={e => setFormData({...formData, contraseña_hash: e.target.value})} required /></div>
           )}
-          <div style={{ gridColumn: 'span 2', display: 'flex', gap: '12px', marginTop: '16px' }}>
-            <Button type="submit" style={{ flex: 2, backgroundColor: '#1e293b', color: 'white' }}>Guardar Registro</Button>
-            <Button onClick={closeModal} style={{ flex: 1, backgroundColor: '#f1f5f9' }}>Cancelar</Button>
-          </div>
+          <Button type="submit" style={{ gridColumn: 'span 2', backgroundColor: 'var(--deep-blue)', color: 'white', marginTop: '10px' }}>Guardar Cambios</Button>
         </form>
       </AdminModal>
 
-      {/* MODAL 2: GESTIÓN DE ORGANIZACIONES */}
-      <AdminModal 
-        isOpen={modalType === 'org'} 
-        onClose={closeModal} 
-        title="Nueva Organización"
-      >
+      <AdminModal isOpen={modalType === 'org'} onClose={closeModal} title="Nueva Organización">
         <form onSubmit={handleSave} style={{ display: 'grid', gap: '20px' }}>
-          <div className="admin-input-group">
-            <label>Nombre de la Entidad (ej. Comisaría Cusco)</label>
-            <input value={formData.nombre || ''} onChange={e => setFormData({...formData, nombre: e.target.value})} required />
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            <div className="admin-input-group">
-              <label>Correo de Contacto</label>
-              <input type="email" value={formData.correo_contacto || ''} onChange={e => setFormData({...formData, correo_contacto: e.target.value})} required />
-            </div>
-            <div className="admin-input-group">
-              <label>Número de Contacto</label>
-              <input value={formData.numero_contacto || ''} onChange={e => setFormData({...formData, numero_contacto: e.target.value})} />
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
-            <Button type="submit" style={{ flex: 1, backgroundColor: '#4f46e5', color: 'white' }}>Crear Organización</Button>
-            <Button onClick={closeModal} style={{ backgroundColor: '#f1f5f9' }}>Cancelar</Button>
-          </div>
+          <div className="admin-input-group"><label>Nombre de la Entidad</label><input value={formData.nombre || ''} onChange={e => setFormData({...formData, nombre: e.target.value})} required /></div>
+          <div className="admin-input-group"><label>Correo de Contacto Institucional</label><input type="email" value={formData.correo_contacto || ''} onChange={e => setFormData({...formData, correo_contacto: e.target.value})} required /></div>
+          <div className="admin-input-group"><label>Teléfono / Central</label><input value={formData.numero_contacto || ''} onChange={e => setFormData({...formData, numero_contacto: e.target.value})} /></div>
+          <Button type="submit" style={{ backgroundColor: 'var(--vibrant-blue)', color: 'white' }}>Registrar Entidad</Button>
         </form>
       </AdminModal>
 
-      {/* MODAL 3: ASIGNAR AUTORIDAD (Tabla autoridades_detalle) */}
-      <AdminModal 
-        isOpen={modalType === 'auth'} 
-        onClose={closeModal} 
-        title="Asignar Autoridad a Entidad"
-      >
+      <AdminModal isOpen={modalType === 'auth'} onClose={closeModal} title="Asignar Personal a Organización">
         <form onSubmit={handleSave} style={{ display: 'grid', gap: '20px' }}>
           <div className="admin-input-group">
-            <label>Seleccionar Usuario (Solo con rol 'autoridad')</label>
+            <label>Seleccionar Autoridad (Solo personal sin asignar)</label>
             <select value={formData.usuario_id || ''} onChange={e => setFormData({...formData, usuario_id: e.target.value})} required>
-              <option value="">-- Seleccione un usuario --</option>
-              {users.filter(u => u.rol === 'autoridad').map(u => (
+              <option value="">-- Seleccione un usuario libre --</option>
+              {availablePersonnel.map(u => (
                 <option key={u.id} value={u.id}>{u.nombres} {u.apellidos} (DNI: {u.dni})</option>
               ))}
             </select>
+            {availablePersonnel.length === 0 && <p style={{ color: '#dc2626', fontSize: '0.75rem', marginTop: '8px' }}>⚠️ No hay personal de rol 'autoridad' disponible para asignar.</p>}
           </div>
-          <div className="admin-input-group">
-            <label>Cargo Específico (ej. Jefe de Operaciones)</label>
-            <input value={formData.cargo || ''} onChange={e => setFormData({...formData, cargo: e.target.value})} required />
-          </div>
-          <Button type="submit" style={{ backgroundColor: '#1e293b', color: 'white' }}>Confirmar Asignación</Button>
+          <div className="admin-input-group"><label>Cargo o Título</label><input placeholder="Ej. Comisario, Jefe de Serenazgo..." value={formData.cargo || ''} onChange={e => setFormData({...formData, cargo: e.target.value})} required /></div>
+          <Button type="submit" disabled={availablePersonnel.length === 0} style={{ backgroundColor: 'var(--deep-blue)', color: 'white' }}>Confirmar Asignación</Button>
         </form>
       </AdminModal>
 
-      {/* MODAL 4: CONFIRMACIÓN DE ELIMINACIÓN */}
-      <AdminModal isOpen={modalType === 'delete'} onClose={closeModal} title="Atención: Acción Requerida">
+      <AdminModal isOpen={modalType === 'delete'} onClose={closeModal} title="Confirmación de Seguridad">
         <div style={{ textAlign: 'center' }}>
-          <div style={{ width: '64px', height: '64px', backgroundColor: '#fee2e2', color: '#dc2626', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          <div style={{ color: '#dc2626', marginBottom: '20px' }}>
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
           </div>
-          <h3>¿Confirmar baja del registro?</h3>
-          <p style={{ color: '#64748b' }}>
-            {deleteTarget === 'user' 
-              ? 'El usuario será marcado como "inactivo" y no podrá iniciar sesión.' 
-              : 'Se eliminará el vínculo de la autoridad con esta organización.'}
-          </p>
+          <h3>¿Está seguro de desactivar al usuario?</h3>
+          <p style={{ color: 'var(--text-muted)' }}>Esta acción restringirá el acceso del usuario inmediatamente, pero conservará sus datos históricos.</p>
           <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
-            <button onClick={handleDelete} style={{ flex: 1, padding: '12px', border: 'none', borderRadius: '8px', backgroundColor: '#dc2626', color: 'white', fontWeight: 700, cursor: 'pointer' }}>Sí, confirmar</button>
-            <button onClick={closeModal} style={{ flex: 1, padding: '12px', border: 'none', borderRadius: '8px', backgroundColor: '#f1f5f9', fontWeight: 600, cursor: 'pointer' }}>No, cancelar</button>
+            <button onClick={handleDelete} style={{ flex: 1, padding: '12px', backgroundColor: '#dc2626', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}>Sí, desactivar</button>
+            <button onClick={closeModal} style={{ flex: 1, padding: '12px', backgroundColor: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}>Cancelar</button>
           </div>
         </div>
       </AdminModal>
 
-      {/* MODAL 5: ÉXITO */}
       <AdminModal isOpen={successModalOpen} onClose={() => setSuccessModalOpen(false)} title="Operación Exitosa">
-        <div style={{ textAlign: 'center', padding: '20px' }}>
+        <div style={{ textAlign: 'center', padding: '10px' }}>
           <div style={{ color: '#059669', marginBottom: '16px' }}>
-            <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
           </div>
-          <p style={{ fontSize: '1.1rem', fontWeight: 500 }}>{successMessage}</p>
-          <Button onClick={() => setSuccessModalOpen(false)} style={{ backgroundColor: '#059669', color: 'white', marginTop: '20px', width: '100%' }}>Aceptar</Button>
+          <p style={{ fontSize: '1.1rem', fontWeight: 500, color: '#1e293b' }}>{successMessage}</p>
+          <Button onClick={() => setSuccessModalOpen(false)} style={{ backgroundColor: '#059669', color: 'white', marginTop: '20px', width: '100%' }}>Entendido</Button>
         </div>
       </AdminModal>
-
     </div>
   );
 }

@@ -1,7 +1,11 @@
 import React, { useState } from "react";
+
 import Button from "../components/Button";
+
 import "../App.css";
+
 import Modal from "../components/Modal";
+
 // Importamos el servicio de autenticación para enviar los datos al backend
 import { authService } from "../services/api";
 
@@ -15,36 +19,32 @@ const RegisterPage = ({ onGoLogin, onBack }) => {
   const [name, setName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState(""); 
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [remember, setRemember] = useState(false);
-  
+
   // --- 2. ESTADOS DE CONTROL Y UI ---
-  const [error, setError] = useState("");           // Mensajes de error críticos
-  const [message, setMessage] = useState("");       // Mensajes informativos (ej. carga de DNI)
+  const [error, setError] = useState(""); // Mensajes de error críticos
+  const [message, setMessage] = useState(""); // Mensajes informativos (ej. carga de DNI)
   const [isLoading, setIsLoading] = useState(false); // Estado de carga para el botón
   const [showSuccessModal, setShowSuccessModal] = useState(false); // Control del modal de éxito
-  
-  // Token para el servicio externo de consulta de identidad (Reniec/JSON.pe)
-  const TOKEN = "6fc3a3134a4e726dc88066d7b1d6db430cd2348230fc4409415add3fa799";
 
   /**
    * FUNCIÓN: fetchDNI
-   * Consulta una API externa para obtener nombres y apellidos automáticamente
+   * Consulta una API pública externa para obtener nombres y apellidos automáticamente
    * apenas el usuario termina de escribir sus 8 dígitos de DNI.
    */
   const fetchDNI = async (dni) => {
     if (dni.length !== 8) return;
 
     try {
-      const response = await fetch("https://api.json.pe/api/dni", {
-        method: "POST",
+      // Usamos una API pública que no requiere Token
+      const response = await fetch(`https://api.peru.dev/api/dni/${dni}`, {
+        method: "GET",
         headers: {
-          Authorization: `Bearer ${TOKEN}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ dni }),
       });
 
       if (!response.ok) {
@@ -77,9 +77,10 @@ const RegisterPage = ({ onGoLogin, onBack }) => {
    * Valida que solo sean números y dispara la búsqueda al llegar a 8 dígitos.
    */
   const handleDNIChange = (e) => {
-    const value = e.target.value.replace(/\D/g, ''); // Regex para eliminar lo que no sea número
+    const value = e.target.value.replace(/\D/g, ""); // Regex para eliminar lo que no sea número
     setDNI(value);
     setMessage("");
+
     if (value.length === 8) {
       fetchDNI(value);
     }
@@ -90,8 +91,8 @@ const RegisterPage = ({ onGoLogin, onBack }) => {
    * Crea una máscara visual mientras el usuario escribe: +51 XXX XXX XXX
    */
   const handlePhoneChange = (e) => {
-    let value = e.target.value.replace(/\D/g, ''); // Limpiar caracteres no numéricos
-    
+    let value = e.target.value.replace(/\D/g, ""); // Limpiar caracteres no numéricos
+
     // Lógica de inserción de espacios y prefijo para legibilidad
     if (value.length > 0) {
       if (value.length <= 2) {
@@ -101,10 +102,13 @@ const RegisterPage = ({ onGoLogin, onBack }) => {
       } else if (value.length <= 8) {
         value = `+${value.slice(0, 2)} ${value.slice(2, 5)} ${value.slice(5)}`;
       } else {
-        value = `+${value.slice(0, 2)} ${value.slice(2, 5)} ${value.slice(5, 8)} ${value.slice(8, 11)}`;
+        value = `+${value.slice(0, 2)} ${value.slice(2, 5)} ${value.slice(
+          5,
+          8
+        )} ${value.slice(8, 11)}`;
       }
     }
-    
+
     setPhone(value);
   };
 
@@ -116,29 +120,37 @@ const RegisterPage = ({ onGoLogin, onBack }) => {
    */
   const handleRegister = async (e) => {
     e.preventDefault();
-    
+
     // --- VALIDACIONES DE SEGURIDAD ---
-    if (!dni || !name || !lastName || !email || !phone || !password || !confirmPassword) {
+    if (
+      !dni ||
+      !name ||
+      !lastName ||
+      !email ||
+      !phone ||
+      !password ||
+      !confirmPassword
+    ) {
       setError("Completa todos los campos obligatorios (*).");
       return;
     }
-    
+
     if (dni.length !== 8) {
       setError("El DNI debe tener 8 dígitos.");
       return;
     }
-    
-    const phoneDigits = phone.replace(/\D/g, '');
+
+    const phoneDigits = phone.replace(/\D/g, "");
     if (phoneDigits.length < 9) {
       setError("El teléfono debe tener al menos 9 dígitos.");
       return;
     }
-    
+
     if (password !== confirmPassword) {
       setError("Las contraseñas no coinciden.");
       return;
     }
-    
+
     if (password.length < 6) {
       setError("La contraseña debe tener al menos 6 caracteres.");
       return;
@@ -161,14 +173,15 @@ const RegisterPage = ({ onGoLogin, onBack }) => {
         name,
         lastName,
         email,
-        phone: phone.replace(/\D/g, ''), // Enviamos solo números al servidor
-        password
+        phone: phone.replace(/\D/g, ""), // Enviamos solo números al servidor
+        password,
       };
 
       const response = await authService.register(userData);
-      
+
       if (response.success) {
         setShowSuccessModal(true); // Mostramos el modal de éxito
+
         // Limpiamos todos los estados para dejar el formulario vacío
         setDNI("");
         setName("");
@@ -190,8 +203,17 @@ const RegisterPage = ({ onGoLogin, onBack }) => {
 
   return (
     <div className="container" style={{ maxWidth: "500px", marginTop: "80px" }}>
-      <div className="profile-card" style={{ padding: "40px", boxShadow: "var(--shadow-lg)" }}>
-        <h2 style={{ marginBottom: "24px", textAlign: "center", color: "var(--deep-blue)" }}>
+      <div
+        className="profile-card"
+        style={{ padding: "40px", boxShadow: "var(--shadow-lg)" }}
+      >
+        <h2
+          style={{
+            marginBottom: "24px",
+            textAlign: "center",
+            color: "var(--deep-blue)",
+          }}
+        >
           Crear Cuenta
         </h2>
 
@@ -200,10 +222,18 @@ const RegisterPage = ({ onGoLogin, onBack }) => {
           <div className="input-group">
             <label>
               DNI *
-              <span style={{ fontSize: "0.75rem", color: "#94a3b8", marginLeft: "8px", fontWeight: "normal" }}>
+              <span
+                style={{
+                  fontSize: "0.75rem",
+                  color: "#94a3b8",
+                  marginLeft: "8px",
+                  fontWeight: "normal",
+                }}
+              >
                 (8 dígitos)
               </span>
             </label>
+
             <div className="input-wrapper">
               <input
                 type="text"
@@ -214,14 +244,17 @@ const RegisterPage = ({ onGoLogin, onBack }) => {
                 required
               />
             </div>
+
             {/* Mensaje de estado del DNI (Cargado o No encontrado) */}
             {message && (
-              <small style={{ 
-                color: message.includes("cargados") ? "#059669" : "#555", 
-                display: "block", 
-                marginTop: "4px",
-                fontSize: "0.8rem"
-              }}>
+              <small
+                style={{
+                  color: message.includes("cargados") ? "#059669" : "#555",
+                  display: "block",
+                  marginTop: "4px",
+                  fontSize: "0.8rem",
+                }}
+              >
                 {message}
               </small>
             )}
@@ -253,7 +286,7 @@ const RegisterPage = ({ onGoLogin, onBack }) => {
               />
             </div>
           </div>
-          
+
           {/* CAMPO: EMAIL */}
           <div className="input-group">
             <label>Correo electrónico *</label>
@@ -272,10 +305,18 @@ const RegisterPage = ({ onGoLogin, onBack }) => {
           <div className="input-group">
             <label>
               Teléfono *
-              <span style={{ fontSize: "0.75rem", color: "#94a3b8", marginLeft: "8px", fontWeight: "normal" }}>
+              <span
+                style={{
+                  fontSize: "0.75rem",
+                  color: "#94a3b8",
+                  marginLeft: "8px",
+                  fontWeight: "normal",
+                }}
+              >
                 (Código país + número)
               </span>
             </label>
+
             <div className="input-wrapper">
               <input
                 type="tel"
@@ -283,7 +324,7 @@ const RegisterPage = ({ onGoLogin, onBack }) => {
                 onChange={handlePhoneChange}
                 placeholder="+51 999 888 777"
                 required
-                maxLength={17} 
+                maxLength={17}
               />
             </div>
           </div>
@@ -292,10 +333,18 @@ const RegisterPage = ({ onGoLogin, onBack }) => {
           <div className="input-group">
             <label>
               Contraseña *
-              <span style={{ fontSize: "0.75rem", color: "#94a3b8", marginLeft: "8px", fontWeight: "normal" }}>
+              <span
+                style={{
+                  fontSize: "0.75rem",
+                  color: "#94a3b8",
+                  marginLeft: "8px",
+                  fontWeight: "normal",
+                }}
+              >
                 (Mínimo 6 caracteres)
               </span>
             </label>
+
             <div className="input-wrapper">
               <input
                 type="password"
@@ -324,14 +373,16 @@ const RegisterPage = ({ onGoLogin, onBack }) => {
 
           {/* CHECKBOX: RECORDAR DATOS */}
           <div style={{ marginBottom: "16px" }}>
-            <label style={{ 
-              display: "flex", 
-              alignItems: "center", 
-              gap: "8px", 
-              cursor: "pointer", 
-              color: "var(--text-muted)",
-              fontSize: "0.9rem"
-            }}>
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                cursor: "pointer",
+                color: "var(--text-muted)",
+                fontSize: "0.9rem",
+              }}
+            >
               <input
                 type="checkbox"
                 checked={remember}
@@ -343,15 +394,17 @@ const RegisterPage = ({ onGoLogin, onBack }) => {
 
           {/* ALERTA DE ERROR: Solo se muestra si 'error' tiene contenido */}
           {error && (
-            <p style={{ 
-              color: "#ef4444", 
-              fontSize: "14px", 
-              marginBottom: "12px", 
-              textAlign: "center", 
-              backgroundColor: "#fee2e2", 
-              padding: "8px", 
-              borderRadius: "6px" 
-            }}>
+            <p
+              style={{
+                color: "#ef4444",
+                fontSize: "14px",
+                marginBottom: "12px",
+                textAlign: "center",
+                backgroundColor: "#fee2e2",
+                padding: "8px",
+                borderRadius: "6px",
+              }}
+            >
               {error}
             </p>
           )}
@@ -367,7 +420,13 @@ const RegisterPage = ({ onGoLogin, onBack }) => {
           </Button>
 
           {/* LINK DE NAVEGACIÓN ALTERNATIVA */}
-          <p style={{ marginTop: "20px", textAlign: "center", color: "var(--text-muted)" }}>
+          <p
+            style={{
+              marginTop: "20px",
+              textAlign: "center",
+              color: "var(--text-muted)",
+            }}
+          >
             ¿Ya tienes cuenta?{" "}
             <span
               onClick={onGoLogin}
@@ -383,13 +442,13 @@ const RegisterPage = ({ onGoLogin, onBack }) => {
           </p>
         </form>
       </div>
-      
+
       {/* MODAL DE ÉXITO: Aparece tras una respuesta 201 del servidor */}
       <Modal
         isOpen={showSuccessModal}
         onClose={() => {
           setShowSuccessModal(false);
-          if (onGoLogin) onGoLogin();   // Al cerrar el modal, mandamos al usuario al Login
+          if (onGoLogin) onGoLogin(); // Al cerrar el modal, mandamos al usuario al Login
         }}
         title="¡Registro exitoso!"
         message="Tu cuenta ha sido creada correctamente. Ahora puedes iniciar sesión con tus credenciales."

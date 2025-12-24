@@ -9,28 +9,37 @@ exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // 1. Validación de entrada: Verifica que el cliente envíe ambos datos
+    // 1. Validación de entrada
     if (!email || !password) {
       return res.status(400).json({ success: false, message: 'Faltan email o contraseña' });
     }
 
-    // 2. Búsqueda: Intenta encontrar al usuario por su correo en la DB
+    // 2. Búsqueda
     const user = await User.findByEmail(email);
     if (!user) {
-      // Por seguridad, usamos un mensaje genérico para no dar pistas de qué falló
       return res.status(401).json({ success: false, message: 'Credenciales incorrectas' });
     }
 
-    // 3. Verificación de Contraseña: Compara la clave enviada con el hash guardado en la DB
+    // --- NUEVO: FILTRO DE ESTADO (SEGURIDAD) ---
+    // Verificamos que el usuario no esté 'inactivo' o 'eliminado'
+    if (user.estado !== 'activo') {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Esta cuenta ha sido desactivada. Por favor, contacte al administrador.' 
+      });
+    }
+    // -------------------------------------------
+
+    // 3. Verificación de Contraseña
     const passwordMatch = await bcrypt.compare(password, user.contraseña_hash);
     if (!passwordMatch) {
       return res.status(401).json({ success: false, message: 'Credenciales incorrectas' });
     }
 
-    // 4. Seguridad: Extraemos el hash de la contraseña para NO enviarlo al frontend
+    // 4. Seguridad: Extraemos el hash para no enviarlo
     const { contraseña_hash, ...userWithoutPassword } = user;
 
-    // 5. Respuesta: Enviamos el objeto 'user' limpio al cliente (React)
+    // 5. Respuesta
     res.json({
       success: true,
       message: 'Login exitoso',
