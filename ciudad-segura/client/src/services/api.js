@@ -1,11 +1,14 @@
 // Configuración base para todas las llamadas API
+
 // const API_BASE_URL = '/api';
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 // Función helper para hacer fetch
 export const apiRequest = async (endpoint, options = {}) => {
   const url = `${API_BASE_URL}${endpoint}`;
-  
+
   const defaultHeaders = {
     'Content-Type': 'application/json',
   };
@@ -20,11 +23,11 @@ export const apiRequest = async (endpoint, options = {}) => {
 
   try {
     const response = await fetch(url, config);
-    
+
     if (!response.ok) {
       throw new Error(`Error ${response.status}: ${response.statusText}`);
     }
-    
+
     return await response.json();
   } catch (error) {
     console.error('API Request Error:', error);
@@ -32,128 +35,157 @@ export const apiRequest = async (endpoint, options = {}) => {
   }
 };
 
+// =====================
 // Servicios específicos
+// =====================
+
 export const authService = {
-  login: (email, password) => 
+  login: (email, password) =>
     apiRequest('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     }),
 
-  register: (userData) => 
+  register: (userData) =>
     apiRequest('/auth/register', {
       method: 'POST',
       body: JSON.stringify(userData),
     }),
 };
 
-// En la sección de complaintsService, agrega:
+// =====================
+// Complaints Service
+// =====================
+
 export const complaintsService = {
   getAll: () => apiRequest('/complaints'),
-  
+
   getById: (id) => apiRequest(`/complaints/${id}`),
-  
-  create: (complaintData) => 
+
+  create: (complaintData) =>
     apiRequest('/complaints', {
       method: 'POST',
       body: JSON.stringify(complaintData),
     }),
-    
-  // Nuevo: Obtener denuncias por usuario (si implementas ese endpoint)
-  getByUser: (userId) => 
+
+  // Nuevo: Obtener denuncias por usuario
+  getByUser: (userId) =>
     apiRequest(`/complaints/user/${userId}`),
 };
 
+// =====================
+// User Service
+// =====================
+
 export const userService = {
-  getProfile: (userId) => apiRequest(`/users/profile/${userId}`),
-  
-  updateProfile: (userId, updates) => 
+  getProfile: (userId) =>
+    apiRequest(`/users/profile/${userId}`),
+
+  updateProfile: (userId, updates) =>
     apiRequest(`/users/profile/${userId}`, {
       method: 'PUT',
       body: JSON.stringify(updates),
     }),
 };
 
+// =====================
+// Notifications Service
+// =====================
+
 export const notificationsService = {
   // Obtener notificaciones de usuario
-  getUserNotifications: (userId) => 
+  getUserNotifications: (userId) =>
     apiRequest(`/notifications/${userId}`),
-  
+
   // Marcar como leída
-  markAsRead: (userId, notificationId) => 
+  markAsRead: (userId, notificationId) =>
     apiRequest(`/notifications/${userId}/read/${notificationId}`, {
       method: 'PUT',
     }),
-  
+
   // Marcar todas como leídas
-  markAllAsRead: (userId) => 
+  markAllAsRead: (userId) =>
     apiRequest(`/notifications/${userId}/read-all`, {
       method: 'PUT',
     }),
-  
+
   // Eliminar notificación
-  deleteNotification: (userId, notificationId) => 
+  deleteNotification: (userId, notificationId) =>
     apiRequest(`/notifications/${userId}/${notificationId}`, {
       method: 'DELETE',
     }),
-  
-  // Crear notificación (para testing)
-  createNotification: (userId, data) => 
+
+  // Crear notificación (testing)
+  createNotification: (userId, data) =>
     apiRequest(`/notifications/${userId}`, {
       method: 'POST',
       body: JSON.stringify(data),
     }),
 };
 
+// =====================
+// Admin Service
+// =====================
+
 export const adminService = {
   // Estadísticas
   getStatistics: () => apiRequest('/admin/statistics'),
-  
+
   // Usuarios
   getUsers: () => apiRequest('/admin/users'),
-  updateUser: (userId, updates) => 
+
+  updateUser: (userId, updates) =>
     apiRequest(`/admin/users/${userId}`, {
       method: 'PUT',
       body: JSON.stringify(updates),
     }),
-  deleteUser: (userId) => 
+
+  deleteUser: (userId) =>
     apiRequest(`/admin/users/${userId}`, {
       method: 'DELETE',
     }),
-  
+
   // Organizaciones
   getOrganizations: () => apiRequest('/admin/organizations'),
-  createOrganization: (orgData) => 
+
+  createOrganization: (orgData) =>
     apiRequest('/admin/organizations', {
       method: 'POST',
       body: JSON.stringify(orgData),
     }),
-  
+
   // Autoridades
   getAuthorities: () => apiRequest('/admin/authorities'),
-  getAuthoritiesByOrg: (orgId) => 
+
+  getAuthoritiesByOrg: (orgId) =>
     apiRequest(`/admin/organizations/${orgId}/authorities`),
-  createAuthority: (authData) => 
+
+  createAuthority: (authData) =>
     apiRequest('/admin/authorities', {
       method: 'POST',
       body: JSON.stringify(authData),
     }),
-  updateAuthority: (authId, updates) => 
+
+  updateAuthority: (authId, updates) =>
     apiRequest(`/admin/authorities/${authId}`, {
       method: 'PUT',
       body: JSON.stringify(updates),
     }),
-  deleteAuthority: (authId) => 
+
+  deleteAuthority: (authId) =>
     apiRequest(`/admin/authorities/${authId}`, {
       method: 'DELETE',
     }),
 };
 
+// =====================
+// Stats Service
+// =====================
+
 export const statsService = {
   // Estadísticas para el Home
   getHomeStats: () => apiRequest('/stats/home'),
-  
-  // Estadísticas completas (para admin también puede usar)
+
+  // Estadísticas completas (admin)
   getAllStats: () => apiRequest('/admin/statistics'),
 };
-

@@ -2,25 +2,38 @@ import React, { useState } from "react";
 import Button from "../components/Button";
 import "../App.css";
 import Modal from "../components/Modal";
+// Importamos el servicio de autenticación para enviar los datos al backend
 import { authService } from "../services/api";
 
+/**
+ * COMPONENTE: RegisterPage
+ * Pantalla para el registro de nuevos ciudadanos con validaciones y auto-llenado por DNI.
+ */
 const RegisterPage = ({ onGoLogin, onBack }) => {
+  // --- 1. ESTADOS DEL FORMULARIO ---
   const [dni, setDNI] = useState("");
   const [name, setName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState(""); // <-- NUEVO: Teléfono
+  const [phone, setPhone] = useState(""); 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [remember, setRemember] = useState(false);
-  const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  // --- 2. ESTADOS DE CONTROL Y UI ---
+  const [error, setError] = useState("");           // Mensajes de error críticos
+  const [message, setMessage] = useState("");       // Mensajes informativos (ej. carga de DNI)
+  const [isLoading, setIsLoading] = useState(false); // Estado de carga para el botón
+  const [showSuccessModal, setShowSuccessModal] = useState(false); // Control del modal de éxito
+  
+  // Token para el servicio externo de consulta de identidad (Reniec/JSON.pe)
   const TOKEN = "6fc3a3134a4e726dc88066d7b1d6db430cd2348230fc4409415add3fa799";
 
-  // Función para consultar DNI
+  /**
+   * FUNCIÓN: fetchDNI
+   * Consulta una API externa para obtener nombres y apellidos automáticamente
+   * apenas el usuario termina de escribir sus 8 dígitos de DNI.
+   */
   const fetchDNI = async (dni) => {
     if (dni.length !== 8) return;
 
@@ -43,6 +56,7 @@ const RegisterPage = ({ onGoLogin, onBack }) => {
 
       const data = await response.json();
 
+      // Si la API devuelve nombres, llenamos los inputs automáticamente
       if (data?.nombres) {
         setName(data.nombres);
         setLastName(`${data.apellido_paterno} ${data.apellido_materno}`);
@@ -58,8 +72,12 @@ const RegisterPage = ({ onGoLogin, onBack }) => {
     }
   };
 
+  /**
+   * HANDLER: Cambio de DNI
+   * Valida que solo sean números y dispara la búsqueda al llegar a 8 dígitos.
+   */
   const handleDNIChange = (e) => {
-    const value = e.target.value.replace(/\D/g, ''); // Solo números
+    const value = e.target.value.replace(/\D/g, ''); // Regex para eliminar lo que no sea número
     setDNI(value);
     setMessage("");
     if (value.length === 8) {
@@ -67,11 +85,14 @@ const RegisterPage = ({ onGoLogin, onBack }) => {
     }
   };
 
-  // Formatear teléfono mientras se escribe
+  /**
+   * HANDLER: Formateo de Teléfono
+   * Crea una máscara visual mientras el usuario escribe: +51 XXX XXX XXX
+   */
   const handlePhoneChange = (e) => {
-    let value = e.target.value.replace(/\D/g, ''); // Solo números
+    let value = e.target.value.replace(/\D/g, ''); // Limpiar caracteres no numéricos
     
-    // Formato: +51 XXX XXX XXX
+    // Lógica de inserción de espacios y prefijo para legibilidad
     if (value.length > 0) {
       if (value.length <= 2) {
         value = `+${value}`;
@@ -87,10 +108,16 @@ const RegisterPage = ({ onGoLogin, onBack }) => {
     setPhone(value);
   };
 
+  /**
+   * FUNCIÓN: handleRegister (El envío principal)
+   * 1. Valida que todos los campos cumplan los requisitos.
+   * 2. Limpia los datos (quita el formato del teléfono).
+   * 3. Llama al servicio de registro del backend.
+   */
   const handleRegister = async (e) => {
     e.preventDefault();
     
-    // Validaciones
+    // --- VALIDACIONES DE SEGURIDAD ---
     if (!dni || !name || !lastName || !email || !phone || !password || !confirmPassword) {
       setError("Completa todos los campos obligatorios (*).");
       return;
@@ -101,7 +128,6 @@ const RegisterPage = ({ onGoLogin, onBack }) => {
       return;
     }
     
-    // Validar teléfono (mínimo 9 dígitos + código país)
     const phoneDigits = phone.replace(/\D/g, '');
     if (phoneDigits.length < 9) {
       setError("El teléfono debe tener al menos 9 dígitos.");
@@ -118,7 +144,6 @@ const RegisterPage = ({ onGoLogin, onBack }) => {
       return;
     }
 
-    // Validar formato de email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       setError("Ingresa un correo electrónico válido.");
@@ -129,21 +154,22 @@ const RegisterPage = ({ onGoLogin, onBack }) => {
     setIsLoading(true);
 
     try {
-      // Llamar al backend
+      // Preparamos el objeto para el Backend
+      // Nota: Aquí 'name' y 'lastName' se enviarán para que el controlador los guarde como 'nombres' y 'apellidos'
       const userData = {
         dni,
         name,
         lastName,
         email,
-        phone: phone.replace(/\D/g, ''), // Guardar solo números
+        phone: phone.replace(/\D/g, ''), // Enviamos solo números al servidor
         password
       };
 
       const response = await authService.register(userData);
       
       if (response.success) {
-        setShowSuccessModal(true);
-        // Limpiar formulario
+        setShowSuccessModal(true); // Mostramos el modal de éxito
+        // Limpiamos todos los estados para dejar el formulario vacío
         setDNI("");
         setName("");
         setLastName("");
@@ -170,7 +196,7 @@ const RegisterPage = ({ onGoLogin, onBack }) => {
         </h2>
 
         <form onSubmit={handleRegister}>
-          {/* DNI */}
+          {/* CAMPO: DNI */}
           <div className="input-group">
             <label>
               DNI *
@@ -188,6 +214,7 @@ const RegisterPage = ({ onGoLogin, onBack }) => {
                 required
               />
             </div>
+            {/* Mensaje de estado del DNI (Cargado o No encontrado) */}
             {message && (
               <small style={{ 
                 color: message.includes("cargados") ? "#059669" : "#555", 
@@ -200,7 +227,7 @@ const RegisterPage = ({ onGoLogin, onBack }) => {
             )}
           </div>
 
-          {/* Nombre */}
+          {/* CAMPOS: NOMBRE Y APELLIDO (Se llenan solos gracias a fetchDNI) */}
           <div className="input-group">
             <label>Nombre *</label>
             <div className="input-wrapper">
@@ -214,7 +241,6 @@ const RegisterPage = ({ onGoLogin, onBack }) => {
             </div>
           </div>
 
-          {/* Apellido */}
           <div className="input-group">
             <label>Apellido *</label>
             <div className="input-wrapper">
@@ -228,7 +254,7 @@ const RegisterPage = ({ onGoLogin, onBack }) => {
             </div>
           </div>
           
-          {/* Email */}
+          {/* CAMPO: EMAIL */}
           <div className="input-group">
             <label>Correo electrónico *</label>
             <div className="input-wrapper">
@@ -242,7 +268,7 @@ const RegisterPage = ({ onGoLogin, onBack }) => {
             </div>
           </div>
 
-          {/* Teléfono */}
+          {/* CAMPO: TELÉFONO (Con máscara +51) */}
           <div className="input-group">
             <label>
               Teléfono *
@@ -257,12 +283,12 @@ const RegisterPage = ({ onGoLogin, onBack }) => {
                 onChange={handlePhoneChange}
                 placeholder="+51 999 888 777"
                 required
-                maxLength={17} // +51 999 888 777 = 15 caracteres
+                maxLength={17} 
               />
             </div>
           </div>
 
-          {/* Contraseña */}
+          {/* CAMPOS: CONTRASEÑAS */}
           <div className="input-group">
             <label>
               Contraseña *
@@ -282,7 +308,6 @@ const RegisterPage = ({ onGoLogin, onBack }) => {
             </div>
           </div>
 
-          {/* Confirmar contraseña */}
           <div className="input-group">
             <label>Confirmar contraseña *</label>
             <div className="input-wrapper">
@@ -297,7 +322,7 @@ const RegisterPage = ({ onGoLogin, onBack }) => {
             </div>
           </div>
 
-          {/* Recordarme */}
+          {/* CHECKBOX: RECORDAR DATOS */}
           <div style={{ marginBottom: "16px" }}>
             <label style={{ 
               display: "flex", 
@@ -316,7 +341,7 @@ const RegisterPage = ({ onGoLogin, onBack }) => {
             </label>
           </div>
 
-          {/* Error */}
+          {/* ALERTA DE ERROR: Solo se muestra si 'error' tiene contenido */}
           {error && (
             <p style={{ 
               color: "#ef4444", 
@@ -331,17 +356,17 @@ const RegisterPage = ({ onGoLogin, onBack }) => {
             </p>
           )}
 
-          {/* Botón de registro */}
+          {/* ACCIÓN PRINCIPAL */}
           <Button
             type="submit"
             variant="primary"
             style={{ width: "100%", padding: "12px", fontSize: "16px" }}
-            disabled={isLoading}
+            disabled={isLoading} // Deshabilitado mientras se procesa el registro
           >
             {isLoading ? "Registrando..." : "Crear Cuenta"}
           </Button>
 
-          {/* Ya tienes cuenta */}
+          {/* LINK DE NAVEGACIÓN ALTERNATIVA */}
           <p style={{ marginTop: "20px", textAlign: "center", color: "var(--text-muted)" }}>
             ¿Ya tienes cuenta?{" "}
             <span
@@ -359,12 +384,12 @@ const RegisterPage = ({ onGoLogin, onBack }) => {
         </form>
       </div>
       
-      {/* MODAL DE ÉXITO */}
+      {/* MODAL DE ÉXITO: Aparece tras una respuesta 201 del servidor */}
       <Modal
         isOpen={showSuccessModal}
         onClose={() => {
           setShowSuccessModal(false);
-          if (onGoLogin) onGoLogin();   // <-- redirige al login
+          if (onGoLogin) onGoLogin();   // Al cerrar el modal, mandamos al usuario al Login
         }}
         title="¡Registro exitoso!"
         message="Tu cuenta ha sido creada correctamente. Ahora puedes iniciar sesión con tus credenciales."

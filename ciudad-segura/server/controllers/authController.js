@@ -1,50 +1,104 @@
-const User = require('../models/User');
+const bcrypt = require('bcrypt'); // Librería para encriptar y comparar contraseñas
+const User = require('../models/User'); // Importación del modelo que habla con la base de datos
 
-exports.login = (req, res) => {
-  const { email, password } = req.body;
-  
-  const user = User.findByEmail(email);
-  
-  if (!user || user.password !== password) {
-    return res.status(401).json({ 
-      success: false, 
-      message: 'Credenciales incorrectas' 
+/**
+ * CONTROLADOR: Login
+ * Procesa el inicio de sesión de los ciudadanos.
+ */
+exports.login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // 1. Validación de entrada: Verifica que el cliente envíe ambos datos
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: 'Faltan email o contraseña' });
+    }
+
+    // 2. Búsqueda: Intenta encontrar al usuario por su correo en la DB
+    const user = await User.findByEmail(email);
+    if (!user) {
+      // Por seguridad, usamos un mensaje genérico para no dar pistas de qué falló
+      return res.status(401).json({ success: false, message: 'Credenciales incorrectas' });
+    }
+
+    // 3. Verificación de Contraseña: Compara la clave enviada con el hash guardado en la DB
+    const passwordMatch = await bcrypt.compare(password, user.contraseña_hash);
+    if (!passwordMatch) {
+      return res.status(401).json({ success: false, message: 'Credenciales incorrectas' });
+    }
+
+    // 4. Seguridad: Extraemos el hash de la contraseña para NO enviarlo al frontend
+    const { contraseña_hash, ...userWithoutPassword } = user;
+
+    // 5. Respuesta: Enviamos el objeto 'user' limpio al cliente (React)
+    res.json({
+      success: true,
+      message: 'Login exitoso',
+      user: userWithoutPassword
     });
+  } catch (error) {
+    console.error('Error en login:', error);
+    res.status(500).json({ success: false, message: 'Error interno del servidor' });
   }
-  
-  const { password: _, ...userWithoutPassword } = user;
-  
-  res.json({
-    success: true,
-    message: 'Login exitoso',
-    user: userWithoutPassword
-  });
 };
 
-exports.register = (req, res) => {
-  const { dni, name, lastName, email, phone, password } = req.body; // <-- Agregar phone
-  
-  // Validar que el email no exista
-  const existingUser = User.findByEmail(email);
-  if (existingUser) {
-    return res.status(400).json({
-      success: false,
-      message: 'El email ya está registrado'
+/**
+ * CONTROLADOR: Register
+ * Procesa la creación de nuevas cuentas de ciudadanos.
+ */
+exports.register = async (req, res) => {
+  try {
+    // Recibe los datos desde el formulario de registro de React
+    const { dni, name, lastName, email, phone, password } = req.body;
+
+    // 1. Validar campos obligatorios: Evita guardar datos nulos en columnas NOT NULL
+    if (!dni || !name || !lastName || !email || !password) {
+      return res.status(400).json({ success: false, message: 'Faltan campos requeridos' });
+    }
+
+    // 2. Verificación de Duplicidad (Email): No pueden haber dos usuarios con el mismo correo
+    const existingEmail = await User.findByEmail(email);
+    if (existingEmail) {
+      return res.status(400).json({ success: false, message: 'El correo electrónico ya está registrado' });
+    }
+
+    // 3. Verificación de Duplicidad (DNI): Evita el error de llave primaria/única en Postgres
+    const existingDni = await User.findByDni(dni);
+    if (existingDni) {
+      return res.status(400).json({ success: false, message: 'El DNI ya se encuentra registrado' });
+    }
+
+    // 4. Persistencia: Crea el usuario en la base de datos
+    // NOTA IMPORTANTE: Observa cómo se mapean los nombres aquí abajo.
+    const newUser = await User.create({
+      dni,
+      nombres: name,      // El campo 'name' del frontend se guarda como 'nombres'
+      apellidos: lastName, // El campo 'lastName' se guarda como 'apellidos'
+      correo: email,
+      telefono: phone || null,
+      password: password
     });
+
+    // 5. Limpieza y Respuesta: Enviamos el nuevo usuario (sin el hash) al frontend
+    const { contraseña_hash, ...userWithoutPassword } = newUser;
+
+    res.status(201).json({
+      success: true,
+      message: 'Usuario registrado exitosamente',
+      user: userWithoutPassword
+    });
+
+  } catch (error) {
+    console.error('Error detallado en registro:', error);
+    
+    // Captura del error 23505 (Violación de restricción única en PostgreSQL)
+    if (error.code === '23505') {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'El DNI o el Correo ya existen en el sistema' 
+      });
+    }
+
+    res.status(500).json({ success: false, message: 'Error al registrar usuario en el servidor' });
   }
-  
-  const newUser = User.create({
-    dni,
-    name,
-    lastName,
-    email,
-    phone: phone || '', // <-- Agregar teléfono
-    password // ¡En producción hashear!
-  });
-  
-  res.status(201).json({
-    success: true,
-    message: 'Usuario registrado exitosamente',
-    user: newUser
-  });
 };

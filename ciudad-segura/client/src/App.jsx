@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+// --- IMPORTACIÓN DE COMPONENTES GLOBALES (UI) ---
 import Header from './components/Header';
 import Footer from './components/Footer';
 import Modal from './components/Modal';
 import ContactModal from './components/ContactModal';
 import AnonymousModal from './components/AnonymousModal';
 
+// --- IMPORTACIÓN DE PÁGINAS (VISTAS) ---
 import Home from './pages/Home';
 import Profile from './pages/Profile';
 import Notifications from './pages/Notifications';
@@ -14,39 +16,53 @@ import RegisterPage from './pages/Register';
 import CreateReport from './pages/CreateReport';
 import ComplaintDetails from './pages/ComplaintDetails';
 import AdminDashboard from './pages/AdminDashboard';
-import ViewAllComplaints from './pages/ViewAllComplaints'; // <-- Asegúrate de importar
+import ViewAllComplaints from './pages/ViewAllComplaints'; 
 
+// --- IMPORTACIÓN DE SERVICIOS (API) ---
+// Estos archivos contienen las funciones que hacen fetch/axios al backend
 import { authService, complaintsService, notificationsService } from './services/api';
 import './App.css';
 
 function App() {
-  // --- ESTADOS PRINCIPALES ---
+  // --- 1. ESTADOS DE IDENTIDAD Y NAVEGACIÓN ---
+  // Almacena el objeto del usuario logueado (null si es invitado)
   const [user, setUser] = useState(null);
+  // Controla qué "página" se muestra (sistema de rutas manual)
   const [currentPage, setCurrentPage] = useState('home'); 
+  // Guarda el ID de la denuncia seleccionada para ver su detalle
   const [selectedComplaintId, setSelectedComplaintId] = useState(null);
   
-  // --- ESTADOS DE MODALES ---
+  // --- 2. ESTADOS DE INTERFAZ (MODALES) ---
+  // Controlan la visibilidad de los diferentes diálogos emergentes
   const [showNotifications, setShowNotifications] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showAnonymousModal, setShowAnonymousModal] = useState(false);
   
-  // --- ESTADOS DE DATOS ---
+  // --- 3. ESTADOS DE DATOS GLOBALES ---
   const [notifications, setNotifications] = useState([]);
 
-  // --- EFECTOS ---
+  // --- 4. EFECTOS (SIDE EFFECTS) ---
   
-  // Cargar notificaciones cuando el usuario cambie
+  /**
+   * EFECTO: Sincronización de Notificaciones
+   * Se ejecuta cada vez que el estado 'user' cambia. Si el usuario entra, busca sus avisos;
+   * si sale, limpia la lista para evitar fugas de información.
+   */
   useEffect(() => {
     if (user) {
       loadNotifications(user.id);
     } else {
-      setNotifications([]); // Limpiar notificaciones si no hay usuario
+      setNotifications([]); 
     }
   }, [user]);
 
-  // Cerrar notificaciones al hacer click fuera
+  /**
+   * EFECTO: UX de Notificaciones
+   * Escucha clicks en cualquier parte del documento para cerrar el dropdown de notificaciones
+   * automáticamente si está abierto.
+   */
   useEffect(() => {
     const handleClickOutside = () => { 
       if (showNotifications) setShowNotifications(false); 
@@ -55,9 +71,9 @@ function App() {
     return () => document.removeEventListener('click', handleClickOutside);
   }, [showNotifications]);
 
-  // --- FUNCIONES DE DATOS ---
+  // --- 5. LÓGICA DE NOTIFICACIONES ---
   
-  // Cargar notificaciones del backend
+  // Conecta con el servicio para traer las alertas del usuario desde la DB
   const loadNotifications = async (userId) => {
     try {
       const response = await notificationsService.getUserNotifications(userId);
@@ -69,12 +85,11 @@ function App() {
     }
   };
 
-  // Marcar notificación como leída
+  // Cambia el estado 'leído' en la DB y actualiza la lista local para reflejar el cambio en UI
   const handleMarkAsRead = async (notificationId) => {
     if (user) {
       try {
         await notificationsService.markAsRead(user.id, notificationId);
-        // Actualizar estado local
         setNotifications(prev => prev.map(notif => 
           notif.id === notificationId ? { ...notif, read: true } : notif
         ));
@@ -84,10 +99,12 @@ function App() {
     }
   };
 
-  // --- FUNCIONES DE AUTENTICACIÓN ---
+  // --- 6. LÓGICA DE AUTENTICACIÓN ---
   
-  // Login con backend
-  // En App.jsx, modifica la función handleLogin:
+  /**
+   * handleLogin: Procesa el inicio de sesión.
+   * Si tiene éxito, guarda el usuario en el estado y redirige según el rol (Admin o Ciudadano).
+   */
   const handleLogin = async (username, password) => {
     try {
       const response = await authService.login(username, password);
@@ -95,8 +112,8 @@ function App() {
       if (response.success) {
         setUser(response.user);
         
-        // Redireccionar según rol
-        if (response.user.role === 'admin') {
+        // Lógica de redirección por roles
+        if (response.user.rol === 'administrador') {
           setCurrentPage('admin-dashboard');
         } else {
           setCurrentPage('home');
@@ -104,17 +121,15 @@ function App() {
         
         setShowLoginModal(false);
       } else {
-        // Lanzar error para que LoginModal muestre el modal
         throw new Error('Credenciales incorrectas');
       }
     } catch (error) {
       console.error('Login error:', error);
-      // Relanzar el error para que LoginModal lo capture
-      throw error;
+      throw error; // El error se relanza para que el LoginModal lo muestre en su UI
     }
   };
 
-  // Logout
+  // Limpia el estado del usuario y regresa al Home al cerrar sesión
   const handleLogout = () => { 
     setUser(null); 
     setCurrentPage('home'); 
@@ -122,9 +137,9 @@ function App() {
     setShowLogoutModal(true); 
   };
 
-  // --- FUNCIONES DE DENUNCIAS ---
+  // --- 7. LÓGICA DE DENUNCIAS ---
   
-  // Crear denuncia con backend
+  // Envía la nueva denuncia al servidor adjuntando el ID del usuario si está logueado
   const handleCreateReport = async (reportData) => {
     try {
       const complaintData = {
@@ -150,10 +165,11 @@ function App() {
     }
   };
 
-  // --- FUNCIONES DE NAVEGACIÓN ---
+  // --- 8. FUNCIONES DE NAVEGACIÓN Y UI ---
   
   const closeModal = () => setShowLogoutModal(false);
   
+  // Helper para mover la vista al inicio al cambiar de página
   const onNavigateToRegister = () => { 
     setCurrentPage('register'); 
     window.scrollTo(0, 0); 
@@ -169,7 +185,7 @@ function App() {
     window.scrollTo(0, 0); 
   };
 
-  // Navegar a crear reporte (con modal anónimo si no hay usuario)
+  // Lógica de acceso: si no está logueado, pregunta si quiere denunciar como anónimo
   const handleNavigateToCreateReport = () => {
     if (user) {
       setCurrentPage('create-report');
@@ -179,13 +195,12 @@ function App() {
     }
   };
 
-  // Navegar a ver todas las denuncias
   const handleNavigateToAllComplaints = () => {
     setCurrentPage('view-all-complaints');
     window.scrollTo(0, 0);
   };
 
-  // Funciones del modal anónimo
+  // Flujo del modal de reporte anónimo
   const handleContinueAnonymous = () => {
     setShowAnonymousModal(false);
     setCurrentPage('create-report');
@@ -197,12 +212,12 @@ function App() {
     setShowLoginModal(true);
   };
 
-  // Otras funciones de navegación
   const goToLogin = () => { 
     setShowLoginModal(true); 
     if (currentPage === 'register') setCurrentPage("home"); 
   };
 
+  // Al seleccionar una denuncia en el Home/Lista, se guarda su ID y se cambia de vista
   const handleViewDetails = (id) => { 
     setSelectedComplaintId(id); 
     setCurrentPage('complaint-details'); 
@@ -222,16 +237,18 @@ function App() {
   const handleOpenContact = () => setShowContactModal(true);
   const handleCloseContact = () => setShowContactModal(false);
 
-  // --- RENDER PRINCIPAL ---
+  // --- 9. RENDERIZADO DEL COMPONENTE ---
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       
-      {/* ADMIN DASHBOARD (página completa separada) */}
+      {/* LOGICA DE RUTA ADMIN: 
+        Si el estado es 'admin-dashboard', se renderiza una vista limpia sin Header/Footer estándar.
+      */}
       {currentPage === 'admin-dashboard' ? (
         <AdminDashboard onLogout={handleLogout} />
       ) : (
         <>
-          {/* HEADER */}
+          {/* COMPONENTES PERSISTENTES (HEADER Y MODALES) */}
           <Header 
             user={user} 
             onLogin={() => setShowLoginModal(true)}
@@ -245,7 +262,6 @@ function App() {
             onMarkAsRead={handleMarkAsRead}
           />
           
-          {/* MODALES GLOBALES */}
           <Modal 
             isOpen={showLogoutModal} 
             onClose={closeModal} 
@@ -271,17 +287,15 @@ function App() {
             onLogin={handleLogin}
           />
 
-          {/* CONTENIDO PRINCIPAL (páginas) */}
+          {/* CONTENEDOR DE PÁGINAS (ENRUTADOR MANUAL):
+            Aquí se decide qué componente mostrar basándose en el estado 'currentPage'.
+          */}
           <div style={{ flex: 1 }}>
-            {/* REGISTRO */}
+            
             {currentPage === 'register' && (
-              <RegisterPage 
-                onGoLogin={goToLogin} 
-                onBack={handleBackToHome} 
-              />
+              <RegisterPage onGoLogin={goToLogin} onBack={handleBackToHome} />
             )}
             
-            {/* HOME */}
             {currentPage === 'home' && (
               <Home 
                 onCreateReport={handleNavigateToCreateReport} 
@@ -290,7 +304,6 @@ function App() {
               />
             )}
             
-            {/* PERFIL */}
             {currentPage === 'profile' && user && (
               <Profile 
                 user={user}
@@ -300,20 +313,14 @@ function App() {
               />
             )}
             
-            {/* NOTIFICACIONES */}
             {currentPage === 'notifications' && user && (
-              <Notifications 
-                user={user}
-                onBack={handleBackToHome} 
-              />
+              <Notifications user={user} onBack={handleBackToHome} />
             )}
             
-            {/* ACERCA DE */}
             {currentPage === 'about' && (
               <About onBack={handleBackToHome} />
             )}
             
-            {/* CREAR REPORTE */}
             {currentPage === 'create-report' && (
               <CreateReport 
                 user={user}
@@ -324,7 +331,6 @@ function App() {
               />
             )}
             
-            {/* DETALLE DE DENUNCIA */}
             {currentPage === 'complaint-details' && (
               <ComplaintDetails 
                 complaintId={selectedComplaintId} 
@@ -332,7 +338,6 @@ function App() {
               />
             )}
             
-            {/* VER TODAS LAS DENUNCIAS */}
             {currentPage === 'view-all-complaints' && (
               <ViewAllComplaints 
                 onBack={handleBackToHome}
@@ -341,7 +346,7 @@ function App() {
             )}
           </div>
           
-          {/* FOOTER (solo en páginas no-admin) */}
+          {/* FOOTER PERSISTENTE */}
           <Footer 
             onNavigateToAbout={handleNavigateToAbout} 
             onOpenContact={handleOpenContact} 

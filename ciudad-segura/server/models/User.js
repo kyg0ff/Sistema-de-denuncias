@@ -1,85 +1,78 @@
-// Modelo de Usuario (en memoria por ahora)
+const pool = require('../db'); 
+const bcrypt = require('bcrypt');
+
 class User {
-  constructor() {
-    this.users = [
-      {
-        id: 1,
-        dni: "12345678",
-        name: "Luis Fernando",
-        lastName: "Gallegos Ballon",
-        email: "luis.gallegos@gmail.com",
-        password: "123456",
-        role: "user",
-        status: "active",
-        phone: "+51 987 654 321",
-        address: "Av. La Cultura 123, Cusco"
-      },
-      {
-        id: 2,
-        dni: "87654321",
-        name: "Administrador",
-        lastName: "Sistema",
-        email: "admin@ciudadsegura.com",
-        password: "admin123",
-        role: "admin",
-        status: "active",
-        phone: "+51 999 888 777",
-        address: "Municipalidad de Cusco"
-      }
-    ];
+  async findAll() {
+    const res = await pool.query('SELECT id, dni, nombres, apellidos, correo, telefono, rol, estado FROM usuarios');
+    return res.rows;
   }
 
-  findAll() {
-    return this.users.map(user => {
-      const { password, ...userWithoutPassword } = user;
-      return userWithoutPassword;
-    });
+  async findById(id) {
+    const res = await pool.query(
+      'SELECT id, dni, nombres, apellidos, correo, telefono, rol, estado FROM usuarios WHERE id = $1', 
+      [id]
+    );
+    return res.rows[0] || null;
   }
 
-  findById(id) {
-    const user = this.users.find(u => u.id === id);
-    if (user) {
-      const { password, ...userWithoutPassword } = user;
-      return userWithoutPassword;
+  async findByEmail(correo) {
+    const res = await pool.query('SELECT * FROM usuarios WHERE correo = $1', [correo]);
+    return res.rows[0] || null;
+  }
+
+  async findByDni(dni) {
+    const res = await pool.query('SELECT * FROM usuarios WHERE dni = $1', [dni]);
+    return res.rows[0] || null;
+  }
+
+  async create(userData) {
+    const passwordToHash = userData.password || userData.contraseña;
+    const hashedPassword = await bcrypt.hash(passwordToHash, 10);
+    
+    const res = await pool.query(
+      `INSERT INTO usuarios (dni, nombres, apellidos, correo, telefono, contraseña_hash, rol)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING id, dni, nombres, apellidos, correo, telefono, rol, estado`,
+      [
+        userData.dni, 
+        userData.nombres, 
+        userData.apellidos, 
+        userData.correo, 
+        userData.telefono, 
+        hashedPassword, 
+        userData.rol || 'ciudadano'
+      ]
+    );
+    return res.rows[0];
+  }
+
+  async update(id, updates) {
+    let query = 'UPDATE usuarios SET ';
+    const values = [];
+    let paramCount = 1;
+
+    if (updates.telefono !== undefined) {
+      query += `telefono = $${paramCount}, `;
+      values.push(updates.telefono);
+      paramCount++;
     }
-    return null;
+    
+    if (updates.contraseña || updates.password) {
+      const hashed = await bcrypt.hash(updates.contraseña || updates.password, 10);
+      query += `contraseña_hash = $${paramCount}, `;
+      values.push(hashed);
+      paramCount++;
+    }
+
+    // Quitar la última coma y espacio
+    query = query.slice(0, -2); 
+    query += ` WHERE id = $${paramCount} RETURNING id, dni, nombres, apellidos, correo, telefono, rol, estado`;
+    values.push(id);
+
+    const res = await pool.query(query, values);
+    return res.rows[0] || null;
   }
-
-  findByEmail(email) {
-    return this.users.find(u => u.email === email);
-  }
-
-  create(userData) {
-    const newUser = {
-        id: this.users.length + 1,
-        ...userData,
-        role: 'user',
-        status: 'active',
-        address: '', // Campo vacío por defecto
-        phone: userData.phone || '', // <-- Agregar teléfono
-        createdAt: new Date().toISOString()
-    };
-    this.users.push(newUser);
-    
-    const { password, ...userWithoutPassword } = newUser;
-    return userWithoutPassword;
-} 
-
-  update(id, updates) {
-    const index = this.users.findIndex(u => u.id === id);
-    if (index === -1) return null;
-    
-    // Actualizar solo campos permitidos (teléfono y password)
-    const allowedFields = ['phone', 'password', 'address']; // <-- Agregar password
-    allowedFields.forEach(field => {
-        if (updates[field] !== undefined) {
-        this.users[index][field] = updates[field];
-        }
-    });
-    
-    const { password, ...updatedUser } = this.users[index];
-    return updatedUser;
-}
 }
 
+// EXPORTAMOS LA INSTANCIA
 module.exports = new User();

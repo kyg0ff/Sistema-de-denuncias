@@ -2,203 +2,253 @@ const User = require('../models/User');
 const Complaint = require('../models/Complaint');
 const Organization = require('../models/Organization');
 
-exports.getStatistics = (req, res) => {
-  const allComplaints = Complaint.findAll();
-  const allUsers = User.findAll();
-  
-  // Calcular tiempos de respuesta
-  const resolvedComplaints = allComplaints.filter(c => c.status === 'resuelto');
-  const avgResponseTime = resolvedComplaints.length > 0 
-    ? Math.floor(resolvedComplaints.reduce((sum, c) => {
-        const createdAt = new Date(c.createdAt);
-        // Simular fecha de resolución (2 días después)
-        const resolvedAt = new Date(createdAt.getTime() + 2 * 24 * 60 * 60 * 1000);
-        return sum + (resolvedAt - createdAt) / (1000 * 60 * 60); // Horas
-      }, 0) / resolvedComplaints.length)
-    : 48; // Valor por defecto
+// =====================
+// Estadísticas
+// =====================
 
-  const stats = {
-    // Totales
-    totalUsers: allUsers.length,
-    totalComplaints: allComplaints.length,
-    activeComplaints: allComplaints.filter(c => 
-      c.status === 'pendiente' || c.status === 'en_revision'
-    ).length,
-    resolvedComplaints: resolvedComplaints.length,
-    
-    // Tiempos
-    avgResponseTime: `${avgResponseTime}h`,
-    resolutionRate: allComplaints.length > 0 
-      ? Math.round((resolvedComplaints.length / allComplaints.length) * 100)
-      : 82,
-    
-    // Por categoría (para el gráfico)
-    byCategory: {
-      obstruccion: allComplaints.filter(c => c.category === 'obstruccion').length,
-      invasion: allComplaints.filter(c => c.category === 'invasion').length,
-      zonas: allComplaints.filter(c => c.category === 'zonas').length,
-      accesos: allComplaints.filter(c => c.category === 'accesos').length,
-      conducta: allComplaints.filter(c => c.category === 'conducta').length
-    },
-    
-    // Últimos 7 días (para posible gráfico de línea)
-    last7Days: Array.from({ length: 7 }, (_, i) => {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      const dateStr = date.toISOString().split('T')[0];
-      
-      return {
-        date: dateStr,
-        count: allComplaints.filter(c => 
-          c.createdAt && c.createdAt.startsWith(dateStr)
-        ).length
-      };
-    }).reverse(),
-    
-    // Denuncias recientes (para el Home)
-    recentComplaints: allComplaints
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-      .slice(0, 6) // Últimas 6 denuncias
-      .map(c => ({
-        id: c.id,
-        category: c.category,
-        title: c.title || `Denuncia ${c.id}`,
-        status: c.status,
-        location: c.location?.address || 'Ubicación no especificada',
-        createdAt: c.createdAt
-      }))
-  };
-  
-  res.json({
-    success: true,
-    data: stats
-  });
-};
+exports.getStatistics = async (req, res) => {
+  try {
+    const allComplaints = await Complaint.findAll();
+    const allUsers = await User.findAll();
 
-exports.getAllUsers = (req, res) => {
-  const users = User.findAll();
-  res.json({
-    success: true,
-    count: users.length,
-    data: users
-  });
-};
+    const resolvedComplaints = allComplaints.filter(
+      (c) => c.estado === 'resuelto'
+    );
 
-exports.updateUser = (req, res) => {
-  const { id } = req.params;
-  const updates = req.body;
-  
-  const updatedUser = User.update(parseInt(id), updates);
-  
-  if (!updatedUser) {
-    return res.status(404).json({
-      success: false,
-      message: 'Usuario no encontrado'
-    });
+    const avgResponseTime =
+      resolvedComplaints.length > 0
+        ? Math.floor(
+            resolvedComplaints.reduce((sum, c) => {
+              const createdAt = new Date(c.fecha_creacion);
+              const resolvedAt = new Date(
+                c.fecha_actualizacion ||
+                  createdAt.getTime() + 2 * 24 * 60 * 60 * 1000
+              );
+              return sum + (resolvedAt - createdAt) / (1000 * 60 * 60);
+            }, 0) / resolvedComplaints.length
+          )
+        : 0;
+
+    const stats = {
+      totalUsers: allUsers.length,
+      totalComplaints: allComplaints.length,
+      resolvedComplaints: resolvedComplaints.length,
+      pendingComplaints: allComplaints.filter(
+        (c) => c.estado === 'pendiente'
+      ).length,
+      avgResponseTime: `${avgResponseTime} horas`,
+      resolutionRate:
+        allComplaints.length > 0
+          ? Math.round(
+              (resolvedComplaints.length / allComplaints.length) * 100
+            )
+          : 0,
+    };
+
+    res.json({ success: true, data: stats });
+  } catch (error) {
+    console.error('Error al obtener estadísticas:', error);
+    res
+      .status(500)
+      .json({ success: false, message: 'Error interno del servidor' });
   }
-  
-  res.json({
-    success: true,
-    message: 'Usuario actualizado',
-    data: updatedUser
-  });
 };
 
-exports.deleteUser = (req, res) => {
-  // En una implementación real, marcaríamos como inactivo
-  // Por ahora simulamos éxito
-  res.json({
-    success: true,
-    message: 'Usuario marcado como inactivo'
-  });
+// =====================
+// Usuarios
+// =====================
+
+exports.getAllUsers = async (req, res) => {
+  try {
+    const users = await User.findAll();
+    res.json({ success: true, data: users });
+  } catch (error) {
+    console.error('Error al obtener usuarios:', error);
+    res
+      .status(500)
+      .json({ success: false, message: 'Error al obtener usuarios' });
+  }
 };
 
+exports.updateUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+
+    const updatedUser = await User.update(parseInt(id), updates);
+
+    if (!updatedUser) {
+      return res
+        .status(404)
+        .json({ success: false, message: 'Usuario no encontrado' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Usuario actualizado',
+      data: updatedUser,
+    });
+  } catch (error) {
+    console.error('Error al actualizar usuario:', error);
+    res
+      .status(500)
+      .json({ success: false, message: 'Error al actualizar usuario' });
+  }
+};
+
+exports.deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Soft-delete: cambiar estado a 'eliminado'
+    const updated = await User.update(parseInt(id), { estado: 'eliminado' });
+
+    if (!updated) {
+      return res
+        .status(404)
+        .json({ success: false, message: 'Usuario no encontrado' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Usuario marcado como eliminado',
+    });
+  } catch (error) {
+    console.error('Error al eliminar usuario:', error);
+    res
+      .status(500)
+      .json({ success: false, message: 'Error al eliminar usuario' });
+  }
+};
+
+// =====================
 // Organizaciones
-exports.getAllOrganizations = (req, res) => {
-  const orgs = Organization.getAllOrgs();
-  res.json({
-    success: true,
-    count: orgs.length,
-    data: orgs
-  });
+// =====================
+
+exports.getAllOrganizations = async (req, res) => {
+  try {
+    const organizations = await Organization.getAll();
+    res.json({ success: true, data: organizations });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener organizaciones',
+    });
+  }
 };
 
-exports.createOrganization = (req, res) => {
-  const orgData = req.body;
-  const newOrg = Organization.createOrg(orgData);
-  
-  res.status(201).json({
-    success: true,
-    message: 'Organización creada',
-    data: newOrg
-  });
+exports.createOrganization = async (req, res) => {
+  try {
+    const {
+      nombre,
+      correo_contacto,
+      numero_contacto,
+      ubicacion,
+    } = req.body;
+
+    const result = await pool.query(
+      'INSERT INTO organizaciones (nombre, correo_contacto, numero_contacto, ubicacion) VALUES ($1, $2, $3, $4) RETURNING *',
+      [nombre, correo_contacto, numero_contacto, ubicacion]
+    );
+
+    res.status(201).json({ success: true, data: result.rows[0] });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ success: false, message: 'Error al crear organización' });
+  }
 };
 
+// =====================
 // Autoridades
-exports.getAuthorities = (req, res) => {
-  const authorities = Organization.getAllAuthorities();
-  res.json({
-    success: true,
-    count: authorities.length,
-    data: authorities
-  });
+// =====================
+
+exports.getAuthorities = async (req, res) => {
+  try {
+    const authorities = await Organization.getAllAuthorities();
+    res.json({ success: true, data: authorities });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ success: false, message: 'Error al obtener autoridades' });
+  }
 };
 
-exports.getAuthoritiesByOrg = (req, res) => {
-  const { orgId } = req.params;
-  const authorities = Organization.getAuthoritiesByOrg(parseInt(orgId));
-  
-  res.json({
-    success: true,
-    count: authorities.length,
-    data: authorities
-  });
-};
-
-exports.createAuthority = (req, res) => {
-  const authData = req.body;
-  const newAuthority = Organization.createAuthority(authData);
-  
-  res.status(201).json({
-    success: true,
-    message: 'Autoridad creada',
-    data: newAuthority
-  });
-};
-
-exports.updateAuthority = (req, res) => {
-  const { id } = req.params;
-  const updates = req.body;
-  
-  const updatedAuthority = Organization.updateAuthority(parseInt(id), updates);
-  
-  if (!updatedAuthority) {
-    return res.status(404).json({
+exports.getAuthoritiesByOrg = async (req, res) => {
+  try {
+    const { orgId } = req.params;
+    const authorities = await Organization.getAuthoritiesByOrg(
+      parseInt(orgId)
+    );
+    res.json({ success: true, data: authorities });
+  } catch (error) {
+    res.status(500).json({
       success: false,
-      message: 'Autoridad no encontrada'
+      message: 'Error al obtener autoridades de organización',
     });
   }
-  
-  res.json({
-    success: true,
-    message: 'Autoridad actualizada',
-    data: updatedAuthority
-  });
 };
 
-exports.deleteAuthority = (req, res) => {
-  const { id } = req.params;
-  const success = Organization.deleteAuthority(parseInt(id));
-  
-  if (!success) {
-    return res.status(404).json({
-      success: false,
-      message: 'Autoridad no encontrada'
-    });
+exports.createAuthority = async (req, res) => {
+  try {
+    const { usuario_id, organizacion_id, cargo } = req.body;
+
+    const result = await pool.query(
+      'INSERT INTO autoridades_detalle (usuario_id, organizacion_id, cargo) VALUES ($1, $2, $3) RETURNING *',
+      [usuario_id, organizacion_id, cargo]
+    );
+
+    res.status(201).json({ success: true, data: result.rows[0] });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ success: false, message: 'Error al crear autoridad' });
   }
-  
-  res.json({
-    success: true,
-    message: 'Autoridad eliminada'
-  });
+};
+
+exports.updateAuthority = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { cargo } = req.body;
+
+    const result = await pool.query(
+      'UPDATE autoridades_detalle SET cargo = $1 WHERE usuario_id = $2 RETURNING *',
+      [cargo, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: 'Autoridad no encontrada' });
+    }
+
+    res.json({ success: true, data: result.rows[0] });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ success: false, message: 'Error al actualizar autoridad' });
+  }
+};
+
+exports.deleteAuthority = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      'DELETE FROM autoridades_detalle WHERE usuario_id = $1 RETURNING *',
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: 'Autoridad no encontrada' });
+    }
+
+    res.json({ success: true, message: 'Autoridad eliminada' });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ success: false, message: 'Error al eliminar autoridad' });
+  }
 };
