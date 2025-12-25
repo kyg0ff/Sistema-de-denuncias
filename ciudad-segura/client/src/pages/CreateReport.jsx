@@ -106,14 +106,46 @@ export default function CreateReport({ user, onBack, onSubmitSuccess, onViewDeta
     <div style={{ backgroundColor: 'var(--bg-body)', minHeight: '100vh', animation: 'fadeIn 0.4s ease-out' }}>
       <main className="container" style={{ paddingBottom: '80px' }}>
         
-        {/* Header de navegación */}
-        <div style={{ padding: '40px 0 20px 0' }}>
-          <button 
-            onClick={onBack} 
-            style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '15px', fontWeight: 600 }}
+        {/* Header de navegación actual */}
+        {/* Header de navegación MEJORADO - Estilo Sólido Azul */}
+        <div style={{ padding: '40px 0 24px 0' }}>
+          <Button 
+            // Eliminamos la variante "ghost" para aplicar estilos personalizados sólidos
+            onClick={onBack}
+            // Icono SVG de flecha en color blanco
+            icon={
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+              </svg>
+            }
+            style={{ 
+              // Estilos para botón sólido con el color de la barra superior
+              backgroundColor: 'var(--deep-blue)', // Color de fondo azul oscuro
+              border: 'none',                      // Sin borde
+              color: 'white',                      // Texto e icono blancos
+              padding: '10px 20px',
+              borderRadius: '12px',                // Bordes redondeados
+              fontSize: '0.95rem',
+              fontWeight: 700,
+              boxShadow: '0 4px 6px -1px rgba(30, 58, 138, 0.3)', // Sombra azulada suave
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '10px',
+              transition: 'all 0.2s ease',
+              cursor: 'pointer'
+            }}
+            // Efecto hover: un tono ligeramente más brillante o diferente para interactividad
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#2563eb'; // Un azul un poco más claro al pasar el mouse
+              e.currentTarget.style.transform = 'translateY(-2px)'; // Pequeño efecto de elevación
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--deep-blue)'; // Vuelve al color original
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}
           >
-            ← Cancelar y volver
-          </button>
+            Cancelar y volver
+          </Button>
         </div>
 
         <div style={{ maxWidth: '1000px', margin: '0 auto' }}>

@@ -4,7 +4,6 @@ import { complaintsService } from '../services/api';
 
 /**
  * COMPONENTE INTERNO: ComplaintRow
- * Representa una fila con fuentes más grandes y legibles.
  */
 const ComplaintRow = ({ item, onClick }) => {
   const getStatusStyle = (status) => {
@@ -25,9 +24,9 @@ const ComplaintRow = ({ item, onClick }) => {
       className="complaint-row-card"
       style={{
         display: 'grid',
-        gridTemplateColumns: '1.5fr 1.2fr 1.8fr 1fr 1.2fr',
+        gridTemplateColumns: '1.5fr 1.2fr 1.8fr 1.5fr 1.2fr', // Ajustado para dar espacio a la placa
         alignItems: 'center',
-        padding: '20px 24px', // Más espaciado vertical
+        padding: '20px 24px',
         backgroundColor: 'white',
         borderBottom: '1px solid #f1f5f9',
         cursor: 'pointer',
@@ -35,59 +34,42 @@ const ComplaintRow = ({ item, onClick }) => {
         gap: '12px'
       }}
     >
-      {/* 1. Código de Seguimiento (Más grande y resaltado) */}
-      <span style={{ 
-        fontWeight: 800, 
-        color: 'var(--vibrant-blue)', 
-        fontFamily: 'monospace', 
-        fontSize: '1.15rem' // <--- Agrandado
-      }}>
+      <span style={{ fontWeight: 800, color: 'var(--vibrant-blue)', fontFamily: 'monospace', fontSize: '1.15rem' }}>
         {item.codigo_seguimiento}
       </span>
 
-      {/* 2. Fecha */}
-      <span style={{ 
-        color: 'var(--text-muted)', 
-        fontSize: '1.05rem', // <--- Agrandado
-        fontWeight: 500 
-      }}>
+      <span style={{ color: 'var(--text-muted)', fontSize: '1.05rem', fontWeight: 500 }}>
         {item.date}
       </span>
 
-      {/* 3. Categoría */}
-      <span style={{ 
-        color: 'var(--deep-blue)', 
-        fontWeight: 600, 
-        fontSize: '1.1rem' // <--- Agrandado
-      }}>
+      <span style={{ color: 'var(--deep-blue)', fontWeight: 600, fontSize: '1.1rem' }}>
         {item.category}
       </span>
 
-      {/* 4. Placa (Estilo placa metálica) */}
       <div style={{ display: 'flex' }}>
         <span style={{ 
           backgroundColor: '#f1f5f9', 
-          padding: '6px 12px', 
+          padding: '6px 14px', 
           borderRadius: '8px', 
-          fontSize: '1.05rem', // <--- Agrandado
+          fontSize: '1rem', 
           fontWeight: 700, 
           color: '#334155',
           border: '2px solid #e2e8f0',
-          minWidth: '90px',
-          textAlign: 'center'
+          minWidth: '100px',
+          textAlign: 'center',
+          letterSpacing: '0.5px'
         }}>
           {item.plate}
         </span>
       </div>
 
-      {/* 5. Estado */}
       <div style={{ textAlign: 'right' }}>
         <span style={{ 
           backgroundColor: style.bg, 
           color: style.color, 
           padding: '8px 16px', 
           borderRadius: '20px', 
-          fontSize: '0.9rem', // <--- Agrandado
+          fontSize: '0.9rem', 
           fontWeight: 800, 
           textTransform: 'uppercase',
           letterSpacing: '0.5px'
@@ -138,11 +120,8 @@ export default function ViewAllComplaints({ onBack, onViewDetails }) {
         setComplaints(transformed);
         setFilteredData(transformed);
       }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
+    } catch (err) { console.error(err); }
+    finally { setIsLoading(false); }
   };
 
   useEffect(() => {
@@ -159,8 +138,8 @@ export default function ViewAllComplaints({ onBack, onViewDetails }) {
   return (
     <main className="container" style={{ padding: '40px 0' }}>
       
-      {/* HEADER */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '40px' }}>
+      {/* HEADER MEJORADO - BOTÓN VOLVER VISIBLE */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
         <div>
           <h1 style={{ fontSize: '2.8rem', fontWeight: 900, color: 'var(--deep-blue)', margin: 0, letterSpacing: '-1px' }}>
             Denuncias y Seguimiento
@@ -169,7 +148,41 @@ export default function ViewAllComplaints({ onBack, onViewDetails }) {
             Listado oficial de reportes ciudadanos registrados.
           </p>
         </div>
-        <Button onClick={onBack} variant="ghost" style={{ fontSize: '1.1rem' }}>Volver</Button>
+
+        {/* BOTÓN VOLVER CON EL COLOR DE LA BARRA SUPERIOR */}
+        <Button 
+          onClick={onBack}
+          icon={
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+          }
+          style={{ 
+            backgroundColor: 'var(--deep-blue)', 
+            color: 'white', 
+            padding: '12px 24px',
+            borderRadius: '12px',
+            fontSize: '1.1rem',
+            fontWeight: 700,
+            border: 'none',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '10px',
+            transition: 'all 0.2s ease',
+            cursor: 'pointer',
+            boxShadow: '0 4px 6px -1px rgba(30, 58, 138, 0.3)'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = '#2563eb';
+            e.currentTarget.style.transform = 'translateY(-2px)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'var(--deep-blue)';
+            e.currentTarget.style.transform = 'translateY(0)';
+          }}
+        >
+          Volver
+        </Button>
       </div>
 
       {/* FILTROS */}
@@ -181,17 +194,15 @@ export default function ViewAllComplaints({ onBack, onViewDetails }) {
           onChange={(e) => setSearchTerm(e.target.value)}
           style={{ 
             flex: 2, padding: '18px 25px', borderRadius: '16px', border: '2px solid #e2e8f0', 
-            fontSize: '1.1rem', fontWeight: 600, outline: 'none', transition: 'border-color 0.2s'
+            fontSize: '1.1rem', fontWeight: 600, outline: 'none'
           }}
-          onFocus={(e) => e.target.style.borderColor = 'var(--vibrant-blue)'}
-          onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
         />
         <select
           value={selectedCategory}
           onChange={(e) => setSelectedCategory(e.target.value)}
           style={{ 
             flex: 1, padding: '18px', borderRadius: '16px', border: '2px solid #e2e8f0', 
-            fontSize: '1.1rem', fontWeight: 600, backgroundColor: 'white', cursor: 'pointer'
+            fontSize: '1.1rem', fontWeight: 600, backgroundColor: 'white'
           }}
         >
           <option value="">Todas las Categorías</option>
@@ -204,13 +215,10 @@ export default function ViewAllComplaints({ onBack, onViewDetails }) {
         backgroundColor: 'white', borderRadius: '24px', overflow: 'hidden', 
         boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', border: '1px solid #e2e8f0' 
       }}>
-        
-        {/* Cabecera con fuente más legible */}
         <div style={{ 
-          display: 'grid', gridTemplateColumns: '1.5fr 1.2fr 1.8fr 1fr 1.2fr', padding: '22px 24px', 
+          display: 'grid', gridTemplateColumns: '1.5fr 1.2fr 1.8fr 1.5fr 1.2fr', padding: '22px 24px', 
           backgroundColor: '#f8fafc', borderBottom: '2px solid #e2e8f0', 
-          fontSize: '0.95rem', // <--- Cabecera agrandada
-          fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '1.5px', gap: '12px'
+          fontSize: '0.95rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '1.5px', gap: '12px'
         }}>
           <span>Cód. Seguimiento</span>
           <span>Fecha</span>
@@ -225,13 +233,11 @@ export default function ViewAllComplaints({ onBack, onViewDetails }) {
             <p style={{ marginTop: '20px', color: 'var(--text-muted)', fontWeight: 600 }}>Cargando registros...</p>
           </div>
         ) : filteredData.length > 0 ? (
-          filteredData.map(item => (
-            <ComplaintRow key={item.id} item={item} onClick={onViewDetails} />
-          ))
+          filteredData.map(item => <ComplaintRow key={item.id} item={item} onClick={onViewDetails} />)
         ) : (
           <div style={{ padding: '100px', textAlign: 'center', color: '#94a3b8' }}>
             <h2 style={{ fontSize: '1.8rem', color: '#cbd5e1' }}>Sin resultados</h2>
-            <p style={{ fontSize: '1.1rem' }}>No se encontraron denuncias con esos criterios.</p>
+            <p style={{ fontSize: '1.1rem' }}>No se encontraron denuncias.</p>
           </div>
         )}
       </div>

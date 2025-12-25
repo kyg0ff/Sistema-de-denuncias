@@ -19,37 +19,28 @@ import AdminDashboard from './pages/AdminDashboard';
 import ViewAllComplaints from './pages/ViewAllComplaints'; 
 
 // --- IMPORTACIÓN DE SERVICIOS (API) ---
-// Estos archivos contienen las funciones que hacen fetch/axios al backend
 import { authService, complaintsService, notificationsService } from './services/api';
 import './App.css';
 
 function App() {
   // --- 1. ESTADOS DE IDENTIDAD Y NAVEGACIÓN ---
-  // Almacena el objeto del usuario logueado (null si es invitado)
   const [user, setUser] = useState(null);
-  // Controla qué "página" se muestra (sistema de rutas manual)
   const [currentPage, setCurrentPage] = useState('home'); 
-  // Guarda el ID de la denuncia seleccionada para ver su detalle
   const [selectedComplaintId, setSelectedComplaintId] = useState(null);
+
+  // --- ESTADO PARA VOLVER ATRÁS ---
+  const [previousPage, setPreviousPage] = useState('home');
   
   // --- 2. ESTADOS DE INTERFAZ (MODALES) ---
-  // Controlan la visibilidad de los diferentes diálogos emergentes
   const [showNotifications, setShowNotifications] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showAnonymousModal, setShowAnonymousModal] = useState(false);
   
-  // --- 3. ESTADOS DE DATOS GLOBALES ---
   const [notifications, setNotifications] = useState([]);
 
-  // --- 4. EFECTOS (SIDE EFFECTS) ---
-  
-  /**
-   * EFECTO: Sincronización de Notificaciones
-   * Se ejecuta cada vez que el estado 'user' cambia. Si el usuario entra, busca sus avisos;
-   * si sale, limpia la lista para evitar fugas de información.
-   */
+  // --- 4. EFECTOS ---
   useEffect(() => {
     if (user) {
       loadNotifications(user.id);
@@ -58,11 +49,6 @@ function App() {
     }
   }, [user]);
 
-  /**
-   * EFECTO: UX de Notificaciones
-   * Escucha clicks en cualquier parte del documento para cerrar el dropdown de notificaciones
-   * automáticamente si está abierto.
-   */
   useEffect(() => {
     const handleClickOutside = () => { 
       if (showNotifications) setShowNotifications(false); 
@@ -72,8 +58,6 @@ function App() {
   }, [showNotifications]);
 
   // --- 5. LÓGICA DE NOTIFICACIONES ---
-  
-  // Conecta con el servicio para traer las alertas del usuario desde la DB
   const loadNotifications = async (userId) => {
     try {
       const response = await notificationsService.getUserNotifications(userId);
@@ -85,7 +69,6 @@ function App() {
     }
   };
 
-  // Cambia el estado 'leído' en la DB y actualiza la lista local para reflejar el cambio en UI
   const handleMarkAsRead = async (notificationId) => {
     if (user) {
       try {
@@ -99,37 +82,27 @@ function App() {
     }
   };
 
-  // --- 6. LÓGICA DE AUTENTICACIÓN ---
-  
-  /**
-   * handleLogin: Procesa el inicio de sesión.
-   * Si tiene éxito, guarda el usuario en el estado y redirige según el rol (Admin o Ciudadano).
-   */
+  // --- 6. LÓGICA DE AUTENTICACIÓN (Mantenida intacta) ---
   const handleLogin = async (username, password) => {
     try {
       const response = await authService.login(username, password);
-      
       if (response.success) {
         setUser(response.user);
-        
-        // Lógica de redirección por roles
         if (response.user.rol === 'administrador') {
           setCurrentPage('admin-dashboard');
         } else {
           setCurrentPage('home');
         }
-        
         setShowLoginModal(false);
       } else {
         throw new Error('Credenciales incorrectas');
       }
     } catch (error) {
       console.error('Login error:', error);
-      throw error; // El error se relanza para que el LoginModal lo muestre en su UI
+      throw error;
     }
   };
 
-  // Limpia el estado del usuario y regresa al Home al cerrar sesión
   const handleLogout = () => { 
     setUser(null); 
     setCurrentPage('home'); 
@@ -138,15 +111,9 @@ function App() {
   };
 
   // --- 7. LÓGICA DE DENUNCIAS ---
-  
-  // Envía la nueva denuncia al servidor adjuntando el ID del usuario si está logueado
   const handleCreateReport = async (reportData) => {
     try {
-      // YA NO HACEMOS reportData.append('usuario_id'...) AQUÍ 
-      // porque CreateReport.jsx ya lo incluyó en el FormData.
-
       const response = await complaintsService.create(reportData);
-      
       if (response.success) {
         return {
           success: true,
@@ -161,11 +128,9 @@ function App() {
     }
   };
 
-  // --- 8. FUNCIONES DE NAVEGACIÓN Y UI ---
-  
+  // --- 8. FUNCIONES DE NAVEGACIÓN ---
   const closeModal = () => setShowLogoutModal(false);
   
-  // Helper para mover la vista al inicio al cambiar de página
   const onNavigateToRegister = () => { 
     setCurrentPage('register'); 
     window.scrollTo(0, 0); 
@@ -181,7 +146,6 @@ function App() {
     window.scrollTo(0, 0); 
   };
 
-  // Lógica de acceso: si no está logueado, pregunta si quiere denunciar como anónimo
   const handleNavigateToCreateReport = () => {
     if (user) {
       setCurrentPage('create-report');
@@ -196,7 +160,6 @@ function App() {
     window.scrollTo(0, 0);
   };
 
-  // Flujo del modal de reporte anónimo
   const handleContinueAnonymous = () => {
     setShowAnonymousModal(false);
     setCurrentPage('create-report');
@@ -213,10 +176,11 @@ function App() {
     if (currentPage === 'register') setCurrentPage("home"); 
   };
 
-  // Al seleccionar una denuncia en el Home/Lista, se guarda su ID y se cambia de vista
+  // --- CAMBIO 1: Guardamos la página donde estamos antes de ir al detalle ---
   const handleViewDetails = (id) => { 
+    setPreviousPage(currentPage); // Guardamos si venimos de 'home', 'profile', 'notifications', etc.
     setSelectedComplaintId(id); 
-    setCurrentPage('complaint-details'); 
+    setCurrentPage('complaint-detail'); 
     window.scrollTo(0, 0); 
   };
 
@@ -233,18 +197,14 @@ function App() {
   const handleOpenContact = () => setShowContactModal(true);
   const handleCloseContact = () => setShowContactModal(false);
 
-  // --- 9. RENDERIZADO DEL COMPONENTE ---
+  // --- 9. RENDERIZADO ---
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       
-      {/* LOGICA DE RUTA ADMIN: 
-        Si el estado es 'admin-dashboard', se renderiza una vista limpia sin Header/Footer estándar.
-      */}
       {currentPage === 'admin-dashboard' ? (
         <AdminDashboard onLogout={handleLogout} />
       ) : (
         <>
-          {/* COMPONENTES PERSISTENTES (HEADER Y MODALES) */}
           <Header 
             user={user} 
             onLogin={() => setShowLoginModal(true)}
@@ -256,97 +216,48 @@ function App() {
             toggleNotifications={toggleNotifications}
             onViewAllNotifications={handleViewAllNotifications}
             onMarkAsRead={handleMarkAsRead}
+            onViewDetails={handleViewDetails}
           />
           
-          <Modal 
-            isOpen={showLogoutModal} 
-            onClose={closeModal} 
-            title="¡Hasta pronto!" 
-            message="Has cerrado sesión correctamente." 
-          />
-          
-          <ContactModal 
-            isOpen={showContactModal} 
-            onClose={handleCloseContact} 
-          />
-          
+          <Modal isOpen={showLogoutModal} onClose={closeModal} title="¡Hasta pronto!" message="Has cerrado sesión correctamente." />
+          <ContactModal isOpen={showContactModal} onClose={handleCloseContact} />
           <AnonymousModal 
             isOpen={showAnonymousModal} 
             onClose={() => setShowAnonymousModal(false)}
             onLogin={handleLoginFromAnonymous}
             onContinueAnonymous={handleContinueAnonymous}
           />
+          <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} onLogin={handleLogin} />
 
-          <LoginModal
-            isOpen={showLoginModal}
-            onClose={() => setShowLoginModal(false)}
-            onLogin={handleLogin}
-          />
-
-          {/* CONTENEDOR DE PÁGINAS (ENRUTADOR MANUAL):
-            Aquí se decide qué componente mostrar basándose en el estado 'currentPage'.
-          */}
           <div style={{ flex: 1 }}>
             
-            {currentPage === 'register' && (
-              <RegisterPage onGoLogin={goToLogin} onBack={handleBackToHome} />
-            )}
-            
-            {currentPage === 'home' && (
-              <Home 
-                onCreateReport={handleNavigateToCreateReport} 
-                onViewDetails={handleViewDetails}
-                onViewAll={handleNavigateToAllComplaints}
-              />
-            )}
-            
-            {currentPage === 'profile' && user && (
-              <Profile 
-                user={user}
-                onLogout={handleLogout} 
-                onBack={handleBackToHome} 
-                onViewDetails={handleViewDetails} 
-              />
-            )}
-            
-            {currentPage === 'notifications' && user && (
-              <Notifications user={user} onBack={handleBackToHome} />
-            )}
-            
-            {currentPage === 'about' && (
-              <About onBack={handleBackToHome} />
-            )}
-            
+            {currentPage === 'register' && <RegisterPage onGoLogin={goToLogin} onBack={handleBackToHome} />}
+            {currentPage === 'home' && <Home onCreateReport={handleNavigateToCreateReport} onViewDetails={handleViewDetails} onViewAll={handleNavigateToAllComplaints} />}
+            {currentPage === 'profile' && user && <Profile user={user} onLogout={handleLogout} onBack={handleBackToHome} onViewDetails={handleViewDetails} />}
+            {currentPage === 'notifications' && user && <Notifications user={user} onBack={handleBackToHome} onViewDetails={handleViewDetails} />}
+            {currentPage === 'about' && <About onBack={handleBackToHome} />}
             {currentPage === 'create-report' && (
               <CreateReport 
-                user={user}
-                onBack={handleBackToHome} 
-                onSubmitSuccess={handleBackToHome} 
-                onViewDetails={handleViewDetails}
-                onCreateReport={handleCreateReport}
+                user={user} onBack={handleBackToHome} onSubmitSuccess={handleBackToHome} 
+                onViewDetails={handleViewDetails} onCreateReport={handleCreateReport} 
               />
             )}
             
-            {currentPage === 'complaint-details' && (
+            {/* --- CAMBIO 2: Usar previousPage para volver --- */}
+            {currentPage === 'complaint-detail' && (
               <ComplaintDetails 
                 complaintId={selectedComplaintId} 
-                onBack={handleBackToHome} 
+                onBack={() => {
+                   setCurrentPage(previousPage); // <--- Vuelve dinámicamente
+                   window.scrollTo(0, 0);
+                }} 
               />
             )}
             
-            {currentPage === 'view-all-complaints' && (
-              <ViewAllComplaints 
-                onBack={handleBackToHome}
-                onViewDetails={handleViewDetails}
-              />
-            )}
+            {currentPage === 'view-all-complaints' && <ViewAllComplaints onBack={handleBackToHome} onViewDetails={handleViewDetails} />}
           </div>
           
-          {/* FOOTER PERSISTENTE */}
-          <Footer 
-            onNavigateToAbout={handleNavigateToAbout} 
-            onOpenContact={handleOpenContact} 
-          />
+          <Footer onNavigateToAbout={handleNavigateToAbout} onOpenContact={handleOpenContact} />
         </>
       )}
     </div>

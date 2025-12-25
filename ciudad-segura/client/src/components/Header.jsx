@@ -9,6 +9,7 @@ import NotificationsDropdown from './NotificationsDropdown';
  */
 export default function Header({ 
   user,                     // Objeto con la sesión (contiene 'nombres', 'role', etc.)
+  onViewDetails,
   onLogin,                  // Abre el modal de inicio de sesión
   onNavigateToRegister,     // Cambia la página a Registro
   onNavigateToProfile,      // Cambia la página a Perfil
@@ -16,7 +17,8 @@ export default function Header({
   notifications,            // Lista de notificaciones desde el servidor
   showNotifications,        // Estado booleano para mostrar/ocultar el dropdown
   toggleNotifications,      // Función para alternar el estado de las notificaciones
-  onViewAllNotifications    // Función para navegar a la lista completa de alertas
+  onViewAllNotifications,    // Función para navegar a la lista completa de alertas
+  onMarkAsRead
 }) {
   
   // Estilo reutilizable para los botones de acceso cuando no hay sesión iniciada
@@ -90,10 +92,15 @@ export default function Header({
 
               {/* El desplegable se renderiza solo si el estado 'showNotifications' es verdadero */}
               {showNotifications && (
-                <NotificationsDropdown 
-                  notifications={notifications} 
-                  onClose={toggleNotifications} 
-                  onViewAll={onViewAllNotifications} 
+                <NotificationsDropdown
+                  userId={user?.id}
+                  notifications={notifications || []} // Agregamos "|| []" por seguridad
+                  onClose={() => toggleNotifications()}
+                  onViewAll={onViewAllNotifications}
+                  onMarkAsRead={onMarkAsRead} // Ahora sí funcionará porque ya existe arriba
+                  onNavigate={onViewDetails}
+                  // Agregamos un chequeo de seguridad aquí también:
+                  unreadCount={(notifications || []).filter(n => !n.leida).length}
                 />
               )}
 

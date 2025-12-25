@@ -1,24 +1,33 @@
 import React from 'react';
 import { notificationsService } from '../services/api';
 
-const NotificationItem = ({ notification, onMarkAsRead }) => {
+const NotificationItem = ({ notification, onMarkAsRead, onNavigate }) => {
   let icon = null;
   let color = 'var(--text-main)';
+  let bg = '#f8fafc';
 
-  if (notification.type === 'update') {
-    icon = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>;
+  // Sincronización con los tipos de tu BD: 'denuncia_creada'
+  if (notification.tipo === 'denuncia_creada') {
+    icon = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>;
     color = 'var(--vibrant-blue)';
-  } else if (notification.type === 'resolved') {
-    icon = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>;
-    color = '#22c55e';
-  } else if (notification.type === 'new_report') {
-    icon = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14.5 10c-.83 0-1.5-.67-1.5-1.5v-5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5z"></path><path d="M20.5 10l-.934-2.802c-.8-.029-1.638-.029-2.477 0L15.5 10"></path></svg>;
-    color = 'var(--medium-blue)';
+    bg = '#eff6ff';
+  } else if (notification.tipo === 'denuncia_resuelta') {
+    icon = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>;
+    color = '#10b981';
+    bg = '#ecfdf5';
   }
 
-  const handleClick = () => {
-    if (!notification.read && onMarkAsRead) {
+  // Convertimos el estado de lectura (t/f o boolean)
+  const isRead = notification.leida === 't' || notification.leida === true;
+
+  const handleClick = (e) => {
+    e.stopPropagation();
+    if (!isRead && onMarkAsRead) {
       onMarkAsRead(notification.id);
+    }
+    // Si tiene denuncia_id, navegamos al detalle
+    if (notification.denuncia_id && onNavigate) {
+      onNavigate(notification.denuncia_id);
     }
   };
 
@@ -27,65 +36,46 @@ const NotificationItem = ({ notification, onMarkAsRead }) => {
       style={{ 
         display: 'flex', 
         gap: '12px', 
-        padding: '12px 0', 
+        padding: '12px', 
         borderBottom: '1px solid #f0f4f8',
         cursor: 'pointer',
-        backgroundColor: notification.read ? 'transparent' : '#f8fbff',
+        backgroundColor: isRead ? 'transparent' : '#f8fbff',
         borderRadius: '8px',
-        padding: '12px'
+        transition: 'background 0.2s'
       }}
       onClick={handleClick}
     >
       <div style={{ 
-        color: color, 
-        fontSize: '1.2rem', 
-        display: 'flex', 
-        alignItems: 'center' 
+        width: '36px', height: '36px', borderRadius: '8px',
+        backgroundColor: bg, color: color,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
       }}>
-        {icon}
+        {icon || <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle></svg>}
       </div>
+      
       <div style={{ flex: 1 }}>
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '8px',
-          marginBottom: '4px' 
-        }}>
-          {!notification.read && (
-            <span style={{
-              width: '8px',
-              height: '8px',
-              borderRadius: '50%',
-              backgroundColor: color,
-              display: 'inline-block'
-            }}></span>
-          )}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
           <p style={{ 
             margin: 0, 
-            fontWeight: notification.read ? 500 : 600, 
-            color: notification.read ? 'var(--text-muted)' : 'var(--deep-blue)', 
+            fontWeight: isRead ? 500 : 700, 
+            color: isRead ? '#64748b' : 'var(--deep-blue)', 
             lineHeight: 1.3, 
-            fontSize: '0.9rem' 
+            fontSize: '0.85rem' 
           }}>
-            {notification.message}
+            {notification.mensaje} {/* Usamos 'mensaje' de tu BD */}
           </p>
         </div>
-        <span style={{ 
-          fontSize: '0.75rem', 
-          color: 'var(--text-muted)' 
-        }}>
-          {notification.time}
-        </span>
-        {notification.complaintId && (
-          <div style={{ 
-            marginTop: '4px', 
-            fontSize: '0.7rem',
-            color: 'var(--medium-blue)',
-            fontWeight: 600
-          }}>
-            ID: {notification.complaintId}
-          </div>
-        )}
+        
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
+          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+            {new Date(notification.fecha_creacion).toLocaleDateString()} {/* Usamos 'fecha_creacion' */}
+          </span>
+          {notification.denuncia_id && (
+            <span style={{ fontSize: '0.7rem', color: 'var(--vibrant-blue)', fontWeight: 700 }}>
+              Ver detalle →
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -93,145 +83,93 @@ const NotificationItem = ({ notification, onMarkAsRead }) => {
 
 export default function NotificationsDropdown({ 
   userId, 
-  notifications, 
+  notifications = [], 
   onClose, 
   onViewAll, 
   onMarkAsRead,
+  onNavigate, // Nueva prop para manejar la navegación desde el dropdown
   unreadCount 
 }) {
-  const handleMarkAsRead = async (notificationId) => {
-    if (onMarkAsRead) {
-      onMarkAsRead(notificationId);
-    }
-  };
 
-  const handleMarkAllAsRead = async () => {
+  const handleMarkAllAsRead = async (e) => {
+    e.stopPropagation();
     try {
       await notificationsService.markAllAsRead(userId);
-      // Recargar notificaciones o actualizar estado
-      if (onViewAll) {
-        onViewAll(); // Esto recargará las notificaciones
-      }
+      if (onViewAll) onViewAll(); 
     } catch (error) {
-      console.error('Error marcando todas como leídas:', error);
+      console.error('Error marcando todas:', error);
     }
   };
 
   return (
     <div className="notifications-dropdown" style={{ 
-      position: 'absolute', 
-      right: '0', 
-      top: 'calc(100% + 15px)', 
-      width: '400px', 
-      maxHeight: '500px', 
-      overflowY: 'auto',
-      backgroundColor: 'white', 
-      borderRadius: '12px', 
-      boxShadow: 'var(--shadow-lg)',
-      border: '1px solid var(--border)', 
-      zIndex: 1000,
-      animation: 'scaleUp 0.2s ease-out forwards',
+      position: 'absolute', right: '0', top: 'calc(100% + 15px)', 
+      width: '380px', backgroundColor: 'white', borderRadius: '16px', 
+      boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)',
+      border: '1px solid var(--border)', zIndex: 1000, overflow: 'hidden'
     }} onClick={(e) => e.stopPropagation()}>
       
       {/* Header */}
       <div style={{ 
-        padding: '16px 20px', 
-        borderBottom: '1px solid #f0f4f8',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center'
+        padding: '16px 20px', borderBottom: '1px solid #f1f5f9',
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        backgroundColor: '#fff'
       }}>
         <div>
-          <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--deep-blue)' }}>
+          <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: 'var(--deep-blue)' }}>
             Notificaciones
           </h3>
-          <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-            {unreadCount || 0} sin leer
-          </p>
+          <span style={{ fontSize: '0.75rem', color: unreadCount > 0 ? '#ef4444' : 'var(--text-muted)', fontWeight: 600 }}>
+            {unreadCount || 0} mensajes nuevos
+          </span>
         </div>
         
         {unreadCount > 0 && (
-          <button 
-            onClick={handleMarkAllAsRead}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--medium-blue)',
-              fontSize: '0.8rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              textDecoration: 'underline'
-            }}
-          >
-            Marcar todas como leídas
+          <button onClick={handleMarkAllAsRead} style={{
+            background: 'none', border: 'none', color: 'var(--vibrant-blue)',
+            fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer'
+          }}>
+            Limpiar todo
           </button>
         )}
       </div>
       
-      {/* Lista de notificaciones */}
-      <div style={{ padding: '0 20px', maxHeight: '350px', overflowY: 'auto' }}>
+      {/* Lista */}
+      <div style={{ maxHeight: '380px', overflowY: 'auto', padding: '8px' }}>
         {notifications.length > 0 ? (
           notifications.map((notif) => (
             <NotificationItem 
               key={notif.id} 
               notification={notif} 
-              onMarkAsRead={handleMarkAsRead}
+              onMarkAsRead={onMarkAsRead}
+              onNavigate={(id) => {
+                onClose(); // Cerramos el dropdown
+                onNavigate(id); // Navegamos al detalle
+              }}
             />
           ))
         ) : (
-          <div style={{ 
-            textAlign: 'center', 
-            padding: '40px 20px', 
-            color: 'var(--text-muted)' 
-          }}>
-            <svg 
-              width="48" 
-              height="48" 
-              viewBox="0 0 24 24" 
-              fill="none" 
-              stroke="currentColor" 
-              strokeWidth="1.5"
-              style={{ marginBottom: '16px', opacity: 0.5 }}
-            >
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-            </svg>
-            <p style={{ margin: 0, fontSize: '0.9rem' }}>
-              Sin nuevas notificaciones
+          <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+              No tienes notificaciones
             </p>
           </div>
         )}
       </div>
 
       {/* Footer */}
-      <div style={{ 
-        padding: '12px 20px', 
-        borderTop: '1px solid #f0f4f8', 
-        textAlign: 'center' 
-      }}>
+      <div style={{ padding: '12px', backgroundColor: '#f8fafc', textAlign: 'center' }}>
         <button 
-          onClick={(e) => { 
-            if (onClose) onClose(e);
-            if (onViewAll) onViewAll();
-          }} 
+          onClick={(e) => { onClose(e); onViewAll(); }} 
           style={{ 
-            background: 'none', 
-            border: 'none', 
-            color: 'var(--medium-blue)', 
-            fontWeight: 700, 
-            cursor: 'pointer', 
-            fontSize: '0.85rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '6px',
-            margin: '0 auto'
+            background: 'white', border: '1px solid var(--border)', 
+            color: 'var(--deep-blue)', fontWeight: 700, cursor: 'pointer', 
+            fontSize: '0.8rem', padding: '8px 16px', borderRadius: '8px',
+            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
           }}
         >
-          Ver todas las notificaciones
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <polyline points="9 18 15 12 9 6"></polyline>
-          </svg>
+          Ver historial completo
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
         </button>
       </div>
     </div>

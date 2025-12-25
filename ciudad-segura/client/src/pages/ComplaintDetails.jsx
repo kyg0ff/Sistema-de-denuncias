@@ -3,7 +3,6 @@ import Button from '../components/Button';
 import { complaintsService } from '../services/api';
 
 const getStatusColor = (status) => {
-  // Normalizamos el estado para que coincida con el backend (minúsculas/guiones)
   const s = (status || '').toLowerCase();
   switch (s) {
     case 'resuelto': 
@@ -25,7 +24,6 @@ export default function ComplaintDetails({ complaintId, onBack }) {
   const [complaint, setComplaint] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // --- CARGA DE DATOS REALES ---
   useEffect(() => {
     const fetchDetail = async () => {
       setLoading(true);
@@ -55,20 +53,16 @@ export default function ComplaintDetails({ complaintId, onBack }) {
     return (
       <div style={{ padding: '100px', textAlign: 'center' }}>
         <p>No se encontró la información solicitada.</p>
-        <Button onClick={onBack}>Volver</Button>
+        <Button onClick={onBack} style={{ backgroundColor: 'var(--deep-blue)', color: 'white' }}>Volver al inicio</Button>
       </div>
     );
   }
 
-  // Preparamos los estilos del badge según el estado del backend
   const statusColors = getStatusColor(complaint.estado);
-  
-  // Formateamos la ubicación (por si es objeto o string)
   const displayLocation = typeof complaint.ubicacion === 'object' 
-    ? complaint.ubicacion.address 
+    ? (complaint.ubicacion.address || complaint.ubicacion.direccion)
     : (complaint.ubicacion || 'Ubicación no especificada');
 
-  // Imagen: Usamos la primera evidencia del backend o el placeholder original
   const displayImage = (complaint.evidencias && complaint.evidencias.length > 0)
     ? `http://localhost:5000/uploads/${complaint.evidencias[0]}`
     : 'https://images.unsplash.com/photo-1562512685-2e6f2cb66258?q=80&w=800';
@@ -77,10 +71,39 @@ export default function ComplaintDetails({ complaintId, onBack }) {
     <div style={{ backgroundColor: 'var(--bg-body)', minHeight: '100vh' }}>
       <main className="container" style={{ paddingBottom: '80px' }}>
         
+        {/* CABECERA CON BOTÓN MEJORADO Y EFECTOS */}
         <div style={{ padding: '40px 0 20px 0' }}>
-          <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '15px', fontWeight: 600 }}>
-            ← Volver
-          </button>
+          <Button 
+            onClick={onBack}
+            style={{ 
+              backgroundColor: 'var(--deep-blue)', 
+              color: 'white', 
+              padding: '12px 24px',
+              borderRadius: '12px',
+              fontSize: '1.05rem',
+              fontWeight: 700,
+              border: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '10px',
+              transition: 'all 0.2s ease',
+              cursor: 'pointer',
+              boxShadow: '0 4px 6px -1px rgba(30, 58, 138, 0.3)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#2563eb';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--deep-blue)';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            Volver al inicio
+          </Button>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '40px' }}>
@@ -105,17 +128,36 @@ export default function ComplaintDetails({ complaintId, onBack }) {
                 </h1>
                 
                 <p style={{ margin: '12px 0 0 0', color: 'var(--vibrant-blue)', fontWeight: 700, fontSize: '1.1rem' }}>
-                  Código de Seguimiento: <span style={{fontFamily: 'monospace', fontSize: '1.2rem'}}>{complaint.codigo_seguimiento || complaint.id}</span>
+                  Código: <span style={{fontFamily: 'monospace'}}>{complaint.codigo_seguimiento}</span>
                 </p>
               </div>
 
               <hr style={{ border: 'none', borderTop: '1px solid var(--border)', margin: '20px 0' }} />
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                
+                {/* DISEÑO DE PLACA IGUAL AL DE DESCRIPCIÓN */}
+                <div>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>
+                    Número de Placa
+                  </label>
+                  <p style={{ 
+                    margin: '4px 0 0 0', 
+                    color: 'var(--deep-blue)', 
+                    fontWeight: 800, 
+                    fontSize: '1.3rem', 
+                    fontFamily: 'monospace',
+                    letterSpacing: '1px'
+                  }}>
+                    {complaint.placa ? complaint.placa.toUpperCase() : 'NO REGISTRADA'}
+                  </p>
+                </div>
+
                 <div>
                   <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Descripción</label>
                   <p style={{ margin: '4px 0 0 0', color: 'var(--deep-blue)', lineHeight: 1.6 }}>{complaint.descripcion}</p>
                 </div>
+
                 <div>
                   <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Ubicación</label>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', color: 'var(--deep-blue)', fontWeight: 500 }}>
@@ -136,7 +178,6 @@ export default function ComplaintDetails({ complaintId, onBack }) {
               <div className="timeline" style={{ position: 'relative', paddingLeft: '10px' }}>
                 <div style={{ position: 'absolute', left: '19px', top: '10px', bottom: '30px', width: '2px', backgroundColor: '#e2e8f0' }}></div>
 
-                {/* Evento inicial: Creación del reporte */}
                 <div style={{ display: 'flex', gap: '20px', marginBottom: '32px', position: 'relative' }}>
                   <div style={{ 
                     width: '20px', height: '20px', borderRadius: '50%', 
@@ -154,32 +195,10 @@ export default function ComplaintDetails({ complaintId, onBack }) {
                       {new Date(complaint.fecha_creacion).toLocaleString()}
                     </span>
                     <p style={{ margin: 0, fontSize: '0.95rem', color: '#475569', lineHeight: 1.5 }}>
-                      La denuncia ha sido ingresada al sistema con éxito y está a la espera de validación.
+                      La denuncia ha sido ingresada con éxito. El vehículo reportado tiene la placa <strong>{complaint.placa || 'N/A'}</strong>.
                     </p>
                   </div>
                 </div>
-
-                {/* Evento secundario (Simulado o real si tuvieras más estados) */}
-                {complaint.estado !== 'pendiente' && (
-                  <div style={{ display: 'flex', gap: '20px', marginBottom: '32px', position: 'relative' }}>
-                    <div style={{ 
-                      width: '20px', height: '20px', borderRadius: '50%', 
-                      backgroundColor: 'var(--soft-blue)', 
-                      border: '4px solid white', 
-                      boxShadow: '0 0 0 2px #cbd5e1',
-                      zIndex: 1, flexShrink: 0 
-                    }}></div>
-                    <div>
-                      <h4 style={{ margin: '0 0 4px 0', fontSize: '1.1rem', color: 'var(--deep-blue)', fontWeight: 700 }}>
-                        {statusColors.label}
-                      </h4>
-                      <p style={{ margin: 0, fontSize: '0.95rem', color: '#475569', lineHeight: 1.5 }}>
-                        El estado del reporte ha sido actualizado a: {statusColors.label}.
-                      </p>
-                    </div>
-                  </div>
-                )}
-                
               </div>
             </div>
           </div>

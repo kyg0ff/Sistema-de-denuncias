@@ -109,7 +109,7 @@ export default function Stats({ homeStats }) {
         border: '1px solid var(--soft-blue)'
       }}>
         <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '32px', color: 'var(--deep-blue)' }}>
-          Denuncias por Categoría {homeStats && '(Datos reales)'}
+          Denuncias por Categoría {homeStats && '(%)'}
         </h3>
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
