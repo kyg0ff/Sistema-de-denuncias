@@ -17,7 +17,7 @@ export default function Hero({ onCreateReport , onViewAll}) {
       }}>
         
         <h1 style={{ fontSize: '3.5rem', margin: '0 0 24px 0', lineHeight: 1.1, fontWeight: 800, color: 'white' }}>
-          Transformemos Cusco,<br/> una ciudad segura.
+          Transformemos Cusco,<br/> una ciudad sin obstáculos.
         </h1>
         <p style={{ fontSize: '1.25rem', marginBottom: '40px', color: '#edf0f0', lineHeight: 1.6 }}>
           Conecta con tu ayuntamiento y vecinos para resolver incidencias urbanas. Rápido, transparente y efectivo.
