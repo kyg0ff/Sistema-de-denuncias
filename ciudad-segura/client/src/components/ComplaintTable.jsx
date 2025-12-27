@@ -57,7 +57,7 @@ export default function ComplaintTable({ data, onViewDetails }) {
               </td>
               <td style={{ color: 'var(--text-muted)' }}>{row.date}</td>
               <td style={{ color: 'var(--text-muted)' }}>{row.time}</td>
-              <td>{row.category}</td>
+              <td>{row.categoria_titulo || row.categoria_slug || row.category}</td>
               <td><StatusBadge status={row.status} /></td>
             </tr>
           ))}

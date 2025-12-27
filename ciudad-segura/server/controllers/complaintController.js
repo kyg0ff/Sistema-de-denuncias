@@ -24,82 +24,58 @@ exports.getComplaintById = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Denuncia no encontrada' });
     }
 
-    res.json({ success: true, data: complaint });
+    res.json({
+      success: true,
+      data: complaint
+    });
   } catch (error) {
-    console.error('Error al obtener denuncia:', error);
+    console.error('Error al obtener denuncia por ID:', error);
     res.status(500).json({ success: false, message: 'Error interno del servidor' });
   }
 };
 
 exports.createComplaint = async (req, res) => {
   try {
-    console.log("--- NUEVA PETICIÓN ---");
-    console.log("Datos recibidos (body):", req.body);
-    
-    // 1. Extraer datos del cuerpo
-    const { categoria, descripcion, placa, referencia, usuario_id, ubicacion } = req.body;
-
-    // --- SOLUCIÓN PARA EL ERROR DE INTEGER ["5", "5"] ---
-    let finalUserId = usuario_id;
-
-    // Si por alguna razón llega como un array, tomamos el primer valor
-    if (Array.isArray(finalUserId)) {
-      finalUserId = finalUserId[0];
-    }
-
-    // Convertimos a número entero. Si es un string vacío, 'null' o undefined, será null.
-    finalUserId = (finalUserId && finalUserId !== '' && finalUserId !== 'null') 
-      ? parseInt(finalUserId, 10) 
-      : null;
-    // ----------------------------------------------------
-
-    // 2. Validación de campos obligatorios
-    if (!categoria || !ubicacion) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Faltan campos obligatorios (categoría, ubicación)' 
+    // Manejo de archivos subidos con multer
+    const evidencesArray = [];
+    if (req.files && req.files.length > 0) {
+      req.files.forEach(file => {
+        evidencesArray.push(`/uploads/${file.filename}`);
       });
     }
 
-    // 3. Procesar las evidencias
-    const evidenciasArray = req.files ? req.files.map(file => file.filename) : [];
-
-    // 4. Preparar el objeto para el modelo
-    const finalUbicacion = typeof ubicacion === 'string' 
-      ? ubicacion 
-      : JSON.stringify(ubicacion);
-
+    // Datos del formulario (el frontend envía 'categoria' como slug string)
     const complaintData = {
-      categoria,
-      titulo: `Reporte de ${categoria}`,
-      descripcion,
-      placa,
-      referencia,
-      usuario_id: finalUserId, 
-      // Convertimos el array de archivos a un string JSON válido: ["img1.png"]
-      ubicacion: finalUbicacion,
-      evidencias: JSON.stringify(evidenciasArray) 
+      categoria_slug: req.body.categoria,                // ← CAMBIO CLAVE: ahora es slug
+      titulo: req.body.titulo,
+      descripcion: req.body.descripcion,
+      placa: req.body.placa || null,
+      ubicacion: req.body.ubicacion ? JSON.parse(req.body.ubicacion) : null,
+      referencia: req.body.referencia || null,
+      usuario_id: req.body.usuario_id ? parseInt(req.body.usuario_id) : null,
+      organizacion_asignada_id: req.body.organizacion_asignada_id ? parseInt(req.body.organizacion_asignada_id) : null,
+      evidencias: evidencesArray.length > 0 ? evidencesArray : null
     };
 
-    // 5. Crear la denuncia en la base de datos
+    // Crear la denuncia (el modelo Complaint se encarga de resolver slug → categoria_id)
     const newComplaint = await Complaint.create(complaintData);
 
-    // 6. Crear notificación si el usuario está registrado
-    // Usamos finalUserId para la comprobación
-    if (finalUserId) {
+    // Crear notificación para el usuario (si está autenticado)
+    if (complaintData.usuario_id) {
       try {
         await Notification.create({
-          usuario_id: finalUserId,
+          usuario_id: complaintData.usuario_id,
           tipo: 'denuncia_creada',
           mensaje: `Tu denuncia ha sido registrada con éxito. Código de seguimiento: ${newComplaint.codigo_seguimiento}`,
           denuncia_id: newComplaint.id
         });
       } catch (notifError) {
         console.error('Error al crear notificación:', notifError);
+        // No rompemos el flujo principal por error en notificación
       }
     }
 
-    // 7. Respuesta al frontend
+    // Respuesta exitosa al frontend
     res.status(201).json({
       success: true,
       message: 'Denuncia creada exitosamente',

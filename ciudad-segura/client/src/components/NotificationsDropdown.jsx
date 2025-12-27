@@ -70,11 +70,6 @@ const NotificationItem = ({ notification, onMarkAsRead, onNavigate }) => {
           <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
             {new Date(notification.fecha_creacion).toLocaleDateString()} {/* Usamos 'fecha_creacion' */}
           </span>
-          {notification.denuncia_id && (
-            <span style={{ fontSize: '0.7rem', color: 'var(--vibrant-blue)', fontWeight: 700 }}>
-              Ver detalle →
-            </span>
-          )}
         </div>
       </div>
     </div>
@@ -119,9 +114,6 @@ export default function NotificationsDropdown({
           <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: 'var(--deep-blue)' }}>
             Notificaciones
           </h3>
-          <span style={{ fontSize: '0.75rem', color: unreadCount > 0 ? '#ef4444' : 'var(--text-muted)', fontWeight: 600 }}>
-            {unreadCount || 0} mensajes nuevos
-          </span>
         </div>
         
         {unreadCount > 0 && (

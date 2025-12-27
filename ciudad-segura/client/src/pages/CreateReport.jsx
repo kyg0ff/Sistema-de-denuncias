@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react'; // ← Agregado useEffect
 import Button from '../components/Button';
 import ReportMap from '../components/ReportMap';
 import ReportCategory from '../components/ReportCategory';
 import ReportEvidence from '../components/ReportEvidence';
+import { categoriesService } from '../services/api'; // ← Nuevo import
 
 /**
  * COMPONENTE: CreateReport
@@ -14,7 +15,7 @@ export default function CreateReport({ user, onBack, onSubmitSuccess, onViewDeta
   const [showSuccess, setShowSuccess] = useState(false);
   const [trackingCode, setTrackingCode] = useState('');
   const [newComplaintId, setNewComplaintId] = useState('');
-  
+
   // --- ESTADOS DE DATOS DEL FORMULARIO ---
   const [position, setPosition] = useState({ lat: -13.5167, lng: -71.9781 });
   const [mapReady, setMapReady] = useState(false);
@@ -25,10 +26,36 @@ export default function CreateReport({ user, onBack, onSubmitSuccess, onViewDeta
   const [files, setFiles] = useState([]); // Almacena los archivos binarios (File objects)
   const [acceptedTerms, setAcceptedTerms] = useState(false);
 
+  // --- NUEVOS ESTADOS PARA CATEGORÍAS ---
+  const [categoriesList, setCategoriesList] = useState([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [categoriesError, setCategoriesError] = useState('');
+
+  // --- FETCH DE CATEGORÍAS AL MONTAR EL COMPONENTE ---
+  useEffect(() => {
+    const fetchCategories = async () => {
+      setCategoriesLoading(true);
+      try {
+        const response = await categoriesService.getAll();
+        if (response.success) {
+          setCategoriesList(response.data);
+        } else {
+          setCategoriesError('Error al cargar las categorías');
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+        setCategoriesError('No se pudieron cargar las categorías. Intenta recargar la página.');
+      } finally {
+        setCategoriesLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
   // --- LÓGICA DE ENVÍO ---
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
     // 1. Validaciones básicas (Se mantienen igual)
     if (user && !acceptedTerms) {
       alert("Para continuar, debes aceptar la declaración jurada.");
@@ -42,42 +69,31 @@ export default function CreateReport({ user, onBack, onSubmitSuccess, onViewDeta
       alert("Debes subir al menos una evidencia visual (foto o video).");
       return;
     }
-
     setIsSubmitting(true);
-
     try {
       const formData = new FormData();
-      
       // CAMPOS ESTÁNDAR
       formData.append('categoria', selectedCategory);
       formData.append('titulo', `Reporte de ${selectedCategory}`);
       formData.append('descripcion', description || 'Sin descripción adicional');
       formData.append('placa', plate);
       formData.append('referencia', reference);
-      
       // --- EL ARREGLO PARA EL ID DE USUARIO ---
-      // Solo agregamos 'usuario_id' si el objeto user existe y tiene un ID.
-      // Si no, no lo agregamos al FormData. El backend recibirá 'undefined' 
-      // y tu modelo Complaint.js hará: complaintData.usuario_id || null (resultando en null).
       if (user && user.id) {
         formData.append('usuario_id', user.id);
       }
-
       // UBICACIÓN
       formData.append('ubicacion', JSON.stringify({
         lat: position.lat,
         lng: position.lng,
         address: reference || 'Ubicación marcada en mapa'
       }));
-
       // EVIDENCIAS
       files.forEach((file) => {
         formData.append('evidencias', file);
       });
-
       // Envío al servidor
       const result = await onCreateReport(formData);
-      
       if (result.success) {
         setTrackingCode(result.trackingCode);
         setNewComplaintId(result.complaintId);
@@ -93,9 +109,9 @@ export default function CreateReport({ user, onBack, onSubmitSuccess, onViewDeta
     }
   };
 
-  const handleCloseSuccess = () => { 
-    setShowSuccess(false); 
-    onSubmitSuccess(); 
+  const handleCloseSuccess = () => {
+    setShowSuccess(false);
+    onSubmitSuccess();
   };
 
   // --- ESTILOS ---
@@ -105,68 +121,65 @@ export default function CreateReport({ user, onBack, onSubmitSuccess, onViewDeta
   return (
     <div style={{ backgroundColor: 'var(--bg-body)', minHeight: '100vh', animation: 'fadeIn 0.4s ease-out' }}>
       <main className="container" style={{ paddingBottom: '80px' }}>
-        
-        {/* Header de navegación actual */}
         {/* Header de navegación MEJORADO - Estilo Sólido Azul */}
         <div style={{ padding: '40px 0 24px 0' }}>
-          <Button 
-            // Eliminamos la variante "ghost" para aplicar estilos personalizados sólidos
+          <Button
             onClick={onBack}
-            // Icono SVG de flecha en color blanco
             icon={
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M19 12H5M12 19l-7-7 7-7"/>
               </svg>
             }
-            style={{ 
-              // Estilos para botón sólido con el color de la barra superior
-              backgroundColor: 'var(--deep-blue)', // Color de fondo azul oscuro
-              border: 'none',                      // Sin borde
-              color: 'white',                      // Texto e icono blancos
+            style={{
+              backgroundColor: 'var(--deep-blue)',
+              border: 'none',
+              color: 'white',
               padding: '10px 20px',
-              borderRadius: '12px',                // Bordes redondeados
+              borderRadius: '12px',
               fontSize: '0.95rem',
               fontWeight: 700,
-              boxShadow: '0 4px 6px -1px rgba(30, 58, 138, 0.3)', // Sombra azulada suave
+              boxShadow: '0 4px 6px -1px rgba(30, 58, 138, 0.3)',
               display: 'inline-flex',
               alignItems: 'center',
               gap: '10px',
               transition: 'all 0.2s ease',
               cursor: 'pointer'
             }}
-            // Efecto hover: un tono ligeramente más brillante o diferente para interactividad
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#2563eb'; // Un azul un poco más claro al pasar el mouse
-              e.currentTarget.style.transform = 'translateY(-2px)'; // Pequeño efecto de elevación
+              e.currentTarget.style.backgroundColor = '#2563eb';
+              e.currentTarget.style.transform = 'translateY(-2px)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--deep-blue)'; // Vuelve al color original
+              e.currentTarget.style.backgroundColor = 'var(--deep-blue)';
               e.currentTarget.style.transform = 'translateY(0)';
             }}
           >
             Cancelar y volver
           </Button>
         </div>
-
         <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
           <div style={{ marginBottom: '32px', textAlign: 'center' }}>
             <h1 style={{ fontSize: '2.5rem', margin: '0', color: 'var(--deep-blue)', fontWeight: 800 }}>Nuevo Reporte</h1>
             <p style={{ color: 'var(--text-muted)', marginTop: '8px' }}>Proporcione información precisa para una atención rápida.</p>
           </div>
-
           <form onSubmit={handleSubmit} className="profile-card" style={{ display: 'flex', flexDirection: 'column', gap: '32px', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', borderRadius: '24px', padding: '40px', backgroundColor: 'white' }}>
-            
             {/* 1. SECCIÓN: CATEGORÍA Y DESCRIPCIÓN */}
             <div>
               <h3 className="section-header" style={{ borderBottom: '2px solid #f1f5f9', paddingBottom: '12px', marginBottom: '24px', fontSize: '1.25rem', color: 'var(--deep-blue)' }}>1. Detalles del Incidente</h3>
-              <ReportCategory 
-                selectedCategory={selectedCategory} 
-                onChange={(e) => setSelectedCategory(e.target.value)} 
+              
+              {/* Mensajes de carga/error de categorías */}
+              {categoriesLoading && <p style={{ color: '#64748b', fontStyle: 'italic' }}>Cargando categorías...</p>}
+              {categoriesError && <p style={{ color: '#dc2626' }}>{categoriesError}</p>}
+              
+              <ReportCategory
+                selectedCategory={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                categoriesList={categoriesList} // ← Ahora pasa la lista desde la DB
               />
               <div className="input-group" style={{ marginTop: '24px' }}>
                 <label style={labelStyle}>Descripción de los hechos <span style={{fontWeight:400, textTransform:'none', color:'#94a3b8'}}>(Opcional)</span></label>
-                <textarea 
-                  rows="3" 
+                <textarea
+                  rows="3"
                   placeholder="Explique brevemente lo que está sucediendo..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
@@ -174,51 +187,48 @@ export default function CreateReport({ user, onBack, onSubmitSuccess, onViewDeta
                 ></textarea>
               </div>
             </div>
-
             {/* 2. SECCIÓN: UBICACIÓN */}
             <div>
               <h3 className="section-header" style={{ borderBottom: '2px solid #f1f5f9', paddingBottom: '12px', marginBottom: '24px', fontSize: '1.25rem', color: 'var(--deep-blue)' }}>2. Ubicación Exacta</h3>
               <div className="input-group" style={{ marginBottom: '16px' }}>
                 <label style={labelStyle}>Marque el punto en el mapa *</label>
-                <ReportMap 
-                  position={position} 
-                  setPosition={setPosition} 
-                  mapReady={mapReady} 
-                  setMapReady={setMapReady} 
+                <ReportMap
+                  position={position}
+                  setPosition={setPosition}
+                  mapReady={mapReady}
+                  setMapReady={setMapReady}
                 />
               </div>
               <div className="input-group">
                 <label style={labelStyle}>Referencia de ubicación <span style={{fontWeight:400, textTransform:'none', color:'#94a3b8'}}>(Opcional)</span></label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   placeholder="Ej. Frente a la tienda roja, altura cuadra 5..."
                   value={reference}
                   onChange={(e) => setReference(e.target.value)}
-                  style={inputStyle} 
+                  style={inputStyle}
                 />
               </div>
             </div>
-
             {/* 3. SECCIÓN: EVIDENCIA (SIN BOTÓN ESCANEAR) */}
             <div>
               <h3 className="section-header" style={{ borderBottom: '2px solid #f1f5f9', paddingBottom: '12px', marginBottom: '24px', fontSize: '1.25rem', color: 'var(--deep-blue)' }}>3. Evidencia y Datos</h3>
-              <ReportEvidence 
-                plate={plate} 
-                setPlate={setPlate} 
-                files={files} 
-                setFiles={setFiles} 
+              <ReportEvidence
+                plate={plate}
+                setPlate={setPlate}
+                files={files}
+                setFiles={setFiles}
               />
             </div>
-
             {/* 4. DECLARACIÓN JURADA (Solo para usuarios logueados) */}
             {user && (
               <div style={{ backgroundColor: '#f8fafc', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
                 <label style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', cursor: 'pointer' }}>
-                  <input 
-                    type="checkbox" 
-                    checked={acceptedTerms} 
-                    onChange={(e) => setAcceptedTerms(e.target.checked)} 
-                    style={{ width: '22px', height: '22px', accentColor: 'var(--deep-blue)', marginTop: '2px' }} 
+                  <input
+                    type="checkbox"
+                    checked={acceptedTerms}
+                    onChange={(e) => setAcceptedTerms(e.target.checked)}
+                    style={{ width: '22px', height: '22px', accentColor: 'var(--deep-blue)', marginTop: '2px' }}
                   />
                   <span style={{ fontSize: '0.9rem', color: 'var(--deep-blue)', lineHeight: 1.6 }}>
                     <strong>Declaración Jurada:</strong> Declaro bajo juramento que la información y evidencias adjuntas son verdaderas. Entiendo que proporcionar información falsa es un delito y asumo la responsabilidad legal correspondiente.
@@ -226,17 +236,16 @@ export default function CreateReport({ user, onBack, onSubmitSuccess, onViewDeta
                 </label>
               </div>
             )}
-
             {/* ACCIÓN FINAL */}
             <div style={{ paddingTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '16px' }}>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 disabled={isSubmitting || (user && !acceptedTerms) || !selectedCategory || files.length === 0}
-                style={{ 
-                  backgroundColor: isSubmitting ? '#94a3b8' : 'var(--deep-blue)', 
-                  color: 'white', 
-                  minWidth: '220px', 
-                  height: '56px', 
+                style={{
+                  backgroundColor: isSubmitting ? '#94a3b8' : 'var(--deep-blue)',
+                  color: 'white',
+                  minWidth: '220px',
+                  height: '56px',
                   fontSize: '1.1rem',
                   fontWeight: 700,
                   boxShadow: '0 4px 14px rgba(14, 42, 59, 0.2)'
@@ -248,7 +257,6 @@ export default function CreateReport({ user, onBack, onSubmitSuccess, onViewDeta
           </form>
         </div>
       </main>
-
       {/* MODAL DE ÉXITO */}
       {showSuccess && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(14, 42, 59, 0.8)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
@@ -260,22 +268,20 @@ export default function CreateReport({ user, onBack, onSubmitSuccess, onViewDeta
             </div>
             <h2 style={{ color: 'var(--deep-blue)', margin: '0 0 12px 0', fontSize: '2rem', fontWeight: 800 }}>¡Reporte Exitoso!</h2>
             <p style={{ color: 'var(--text-muted)', marginBottom: '32px', fontSize: '1.05rem' }}>Tu denuncia ha sido registrada en el sistema de seguridad.</p>
-            
             <div style={{ backgroundColor: '#f8fafc', padding: '20px', borderRadius: '20px', marginBottom: '32px', border: '2px dashed #e2e8f0' }}>
               <span style={{ display: 'block', fontSize: '0.8rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1.5px', fontWeight: 800, marginBottom: '8px' }}>Código de Seguimiento</span>
               <span style={{ display: 'block', fontSize: '2.2rem', fontWeight: 900, color: 'var(--vibrant-blue)', letterSpacing: '3px', fontFamily: 'monospace' }}>{trackingCode}</span>
             </div>
-
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <Button 
-                onClick={() => onViewDetails(newComplaintId)} 
+              <Button
+                onClick={() => onViewDetails(newComplaintId)}
                 style={{ width: '100%', backgroundColor: 'var(--deep-blue)', color: 'white', height: '52px' }}
               >
                 Ver Detalles del Reporte
               </Button>
-              <Button 
-                onClick={handleCloseSuccess} 
-                variant="ghost" 
+              <Button
+                onClick={handleCloseSuccess}
+                variant="ghost"
                 style={{ width: '100%', color: '#64748b', fontWeight: 600 }}
               >
                 Volver al Panel Principal

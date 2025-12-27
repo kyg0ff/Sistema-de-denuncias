@@ -117,7 +117,8 @@ export default function ComplaintDetails({ complaintId, onBack }) {
               <div style={{ marginBottom: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
                   <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    {complaint.categoria}
+                    {/* ← CAMBIO AQUÍ */}
+                    {complaint.categoria_titulo || complaint.categoria_slug || 'Categoría no especificada'}
                   </span>
                   <span style={{ backgroundColor: statusColors.bg, color: statusColors.text, padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '800', textTransform: 'uppercase' }}>
                     {statusColors.label}
@@ -126,7 +127,6 @@ export default function ComplaintDetails({ complaintId, onBack }) {
                 <h1 style={{ fontSize: '1.8rem', margin: 0, color: 'var(--deep-blue)', fontWeight: 800, lineHeight: 1.2 }}>
                   {complaint.titulo}
                 </h1>
-                
                 <p style={{ margin: '12px 0 0 0', color: 'var(--vibrant-blue)', fontWeight: 700, fontSize: '1.1rem' }}>
                   Código: <span style={{fontFamily: 'monospace'}}>{complaint.codigo_seguimiento}</span>
                 </p>

@@ -229,3 +229,11 @@ export const statsService = {
   // Estadísticas completas (admin)
   getAllStats: () => apiRequest('/admin/statistics'),
 };
+
+// =====================
+// Categories Service
+// =====================
+
+export const categoriesService = {
+  getAll: () => apiRequest('/categories'),
+};

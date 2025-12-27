@@ -163,14 +163,7 @@ export default function Notifications({ user, onBack, onViewDetails }) {
                       <p style={{ margin: 0, color: '#475569', fontSize: '1rem', lineHeight: 1.4 }}>
                         {notif.mensaje}
                       </p>
-                      
-                      {/* Indicador visual de que se puede ir al detalle */}
-                      {notif.denuncia_id && (
-                        <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--vibrant-blue)', fontSize: '0.85rem', fontWeight: 800 }}>
-                          VER DETALLE DE REPORTE
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                        </div>
-                      )}
+              
                     </div>
                   </div>
                 );

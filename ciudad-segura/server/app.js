@@ -10,6 +10,7 @@ const userRoutes = require('./routes/userRoutes');
 const adminRoutes = require('./routes/adminRoutes'); // ← Posible origen del crash si hay error aquí
 const statsRoutes = require('./routes/statsRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const categoriesRoutes = require('./routes/categoriesRoutes');
 
 const app = express();
 
@@ -38,6 +39,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/categories', categoriesRoutes);
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 

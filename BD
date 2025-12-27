@@ -107,3 +107,124 @@ SELECT
     COUNT(*) AS cantidad_por_categoria
 FROM denuncias
 GROUP BY categoria;
+
+----------------------------------------
+-- NUEVOS CAMBIOS PARA LAS CATEGORIAS --
+----------------------------------------
+
+-- 1. Creamos el tipo ENUM para estandarizar las prioridades
+CREATE TYPE prioridad_nivel AS ENUM ('alta', 'media', 'baja');
+
+-- 2. Creamos la tabla de categorías simplificada
+CREATE TABLE categorias (
+    id          SERIAL PRIMARY KEY,
+    slug        VARCHAR(50) UNIQUE NOT NULL, -- Identificador único (ej: 'obstruccion')
+    titulo      VARCHAR(100) NOT NULL,       -- Nombre visible (ej: 'Obstrucción')
+    descripcion TEXT,                        -- Explicación de la categoría
+    infracciones JSONB,                      -- Lista de reglas [Regla 1, Regla 2...]
+    prioridad   prioridad_nivel NOT NULL     -- Parámetro de gravedad
+);
+
+-- 3. Insertamos la data para que el slug coincida con lo que ya tienes en tus denuncias actuales
+INSERT INTO categorias (slug, titulo, descripcion, prioridad, infracciones) VALUES
+(
+    'obstruccion', 
+    'Obstrucción', 
+    'Infracciones que bloquean el flujo vehicular o ponen en riesgo inmediato a otros conductores.', 
+    'alta', 
+    '["Estacionar interrumpiendo totalmente el tránsito. M21", "Estacionar en curvas, puentes, túneles, zonas estrechas. M06", "Detenerse para cargar/descargar mercancías obstaculizando. M22"]'
+);
+
+INSERT INTO categorias (slug, titulo, descripcion, prioridad, infracciones) VALUES
+(
+    'invasion', 
+    'Invasión Peatonal', 
+    'Protegen a los peatones y personas con discapacidad.', 
+    'alta', 
+    '["Estacionar sobre aceras, áreas verdes, pasos peatonales. G11", "Estacionar sobre el crucero peatonal o intersección. G41", "Estacionar a menos de 10m de un cruce peatonal. G46"]'
+);
+
+INSERT INTO categorias (slug, titulo, descripcion, prioridad, infracciones) VALUES
+(
+    'zonas', 
+    'Zonas Prohibidas', 
+    'Las más comunes en zonas urbanas fiscalizadas.', 
+    'media', 
+    '["Estacionar en zonas prohibidas o rígidas señalizadas. G40", "Estacionar en vías con pendiente sin seguridad. G52", "Estacionar afectando la visibilidad o fluidez. G47"]'
+);
+
+INSERT INTO categorias (slug, titulo, descripcion, prioridad, infracciones) VALUES
+(
+    'accesos', 
+    'Accesos y Servicios Públicos', 
+    'Bloqueos a propiedades privadas o servicios de emergencia.', 
+    'media', 
+    '["Frente a garajes o estacionamientos públicos. G42", "A menos de 5m de hidrantes, hospitales o bomberos. G43", "A menos de 10m de paraderos de buses. G46", "A menos de 3m de puertas de colegios/teatros. G44"]'
+);
+
+INSERT INTO categorias (slug, titulo, descripcion, prioridad, infracciones) VALUES
+(
+    'conducta', 
+    'Conducta Indebida', 
+    'Situaciones técnicas o de desorden.', 
+    'baja', 
+    '["Reparaciones mecánicas en vía pública (salvo emergencia). G55", "Estacionar vehículos pesados en vías no autorizadas. G48"]'
+);
+
+
+-- MIGRACION DE DATOS EXISTENTES --
+-- A. Añadimos la columna que guardará el ID de la categoría
+ALTER TABLE denuncias ADD COLUMN categoria_id INTEGER REFERENCES categorias(id);
+
+
+-- B. PASO CLAVE: Migramos el texto de la columna 'categoria' al ID de la tabla 'categorias'
+-- Comparamos el valor del antiguo ENUM (convertido a texto) con el 'slug'
+UPDATE denuncias d
+SET categoria_id = c.id
+FROM categorias c
+WHERE d.categoria::text = c.slug;
+
+-- C. Hacemos que la nueva columna sea obligatoria (ahora que ya tiene datos)
+ALTER TABLE denuncias ALTER COLUMN categoria_id SET NOT NULL;
+
+
+
+
+-- LIMPIEZA DE LA ESTRUCTURA ANTIGUA --
+-- A. Agregamos la columna
+ALTER TABLE categorias ADD COLUMN color VARCHAR(20) DEFAULT '#94a3b8';
+
+-- B. Asignamos los colores a tus categorías actuales
+UPDATE categorias SET color = '#ef4444' WHERE slug = 'obstruccion';
+UPDATE categorias SET color = '#f59e0b' WHERE slug = 'invasion';
+UPDATE categorias SET color = '#3b82f6' WHERE slug = 'zonas';
+UPDATE categorias SET color = '#8b5cf6' WHERE slug = 'accesos';
+UPDATE categorias SET color = '#10b981' WHERE slug = 'conducta';
+
+-- C. Actualizamos la Vista para que entregue el color
+DROP VIEW IF EXISTS vista_estadisticas;
+
+CREATE VIEW vista_estadisticas AS
+SELECT 
+    COUNT(d.id) AS total_denuncias,
+    COUNT(CASE WHEN d.estado = 'resuelto' THEN 1 END) AS denuncias_resueltas,
+    ROUND(AVG(EXTRACT(EPOCH FROM (d.fecha_actualizacion - d.fecha_creacion)) / 3600)::numeric, 2) AS tiempo_promedio_resolucion_horas,
+    c.slug AS categoria_slug,
+    c.titulo AS categoria_nombre,
+    c.color AS categoria_color, -- <<-- NUEVO CAMPO
+    c.prioridad AS nivel_prioridad,
+    COUNT(d.id) AS cantidad_por_categoria
+FROM categorias c
+LEFT JOIN denuncias d ON c.id = d.categoria_id
+GROUP BY c.id, c.slug, c.titulo, c.color, c.prioridad;
+
+
+
+
+-- Borramos la columna antigua de texto
+ALTER TABLE denuncias DROP COLUMN categoria;
+
+-- Borramos el tipo ENUM antiguo que ya no se usará
+DROP TYPE IF EXISTS categoria_denuncia;
+
+

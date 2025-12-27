@@ -19,12 +19,12 @@ const ComplaintRow = ({ item, onClick }) => {
   const style = getStatusStyle(item.status);
 
   return (
-    <div 
+    <div
       onClick={() => onClick(item.id)}
       className="complaint-row-card"
       style={{
         display: 'grid',
-        gridTemplateColumns: '1.5fr 1.2fr 1.8fr 1.5fr 1.2fr', // Ajustado para dar espacio a la placa
+        gridTemplateColumns: '1.5fr 1.2fr 1.8fr 1.5fr 1.2fr',
         alignItems: 'center',
         padding: '20px 24px',
         backgroundColor: 'white',
@@ -37,40 +37,37 @@ const ComplaintRow = ({ item, onClick }) => {
       <span style={{ fontWeight: 800, color: 'var(--vibrant-blue)', fontFamily: 'monospace', fontSize: '1.15rem' }}>
         {item.codigo_seguimiento}
       </span>
-
       <span style={{ color: 'var(--text-muted)', fontSize: '1.05rem', fontWeight: 500 }}>
         {item.date}
       </span>
-
+      {/* CORRECCIÓN: Usa los campos reales del backend */}
       <span style={{ color: 'var(--deep-blue)', fontWeight: 600, fontSize: '1.1rem' }}>
-        {item.category}
+        {item.categoria_titulo || item.categoria_slug || 'Sin categoría'}
       </span>
-
       <div style={{ display: 'flex' }}>
-        <span style={{ 
-          backgroundColor: '#f1f5f9', 
-          padding: '6px 14px', 
-          borderRadius: '8px', 
-          fontSize: '1rem', 
-          fontWeight: 700, 
+        <span style={{
+          backgroundColor: '#f1f5f9',
+          padding: '6px 14px',
+          borderRadius: '8px',
+          fontSize: '1rem',
+          fontWeight: 700,
           color: '#334155',
           border: '2px solid #e2e8f0',
           minWidth: '100px',
           textAlign: 'center',
           letterSpacing: '0.5px'
         }}>
-          {item.plate}
+          {item.plate || 'SIN PLACA'}
         </span>
       </div>
-
       <div style={{ textAlign: 'right' }}>
-        <span style={{ 
-          backgroundColor: style.bg, 
-          color: style.color, 
-          padding: '8px 16px', 
-          borderRadius: '20px', 
-          fontSize: '0.9rem', 
-          fontWeight: 800, 
+        <span style={{
+          backgroundColor: style.bg,
+          color: style.color,
+          padding: '8px 16px',
+          borderRadius: '20px',
+          fontSize: '0.9rem',
+          fontWeight: 800,
           textTransform: 'uppercase',
           letterSpacing: '0.5px'
         }}>
@@ -88,14 +85,6 @@ export default function ViewAllComplaints({ onBack, onViewDetails }) {
   const [filteredData, setFilteredData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const categories = [
-    { id: 'obstruccion', label: 'Obstrucción' },
-    { id: 'invasion', label: 'Invasión Peatonal' },
-    { id: 'zonas', label: 'Zonas Prohibidas' },
-    { id: 'accesos', label: 'Accesos Públicos' },
-    { id: 'conducta', label: 'Conducta Indebida' }
-  ];
-
   useEffect(() => {
     loadComplaints();
   }, []);
@@ -109,35 +98,55 @@ export default function ViewAllComplaints({ onBack, onViewDetails }) {
           id: c.id,
           codigo_seguimiento: c.codigo_seguimiento,
           date: new Date(c.fecha_creacion).toLocaleDateString('es-PE'),
-          category: categories.find(cat => cat.id === c.categoria)?.label || c.categoria,
-          categoryRaw: c.categoria,
+          // CORRECCIÓN: Usamos los campos reales del JOIN
+          categoria_titulo: c.categoria_titulo,
+          categoria_slug: c.categoria_slug,
           plate: c.placa || 'SIN PLACA',
           status: {
-            'pendiente': 'Pendiente', 'en_revision': 'En Revisión',
-            'resuelto': 'Resuelto', 'urgente': 'Urgente'
+            'pendiente': 'Pendiente',
+            'en_revision': 'En Revisión',
+            'resuelto': 'Resuelto',
+            'urgente': 'Urgente'
           }[c.estado] || c.estado
         }));
         setComplaints(transformed);
         setFilteredData(transformed);
       }
-    } catch (err) { console.error(err); }
-    finally { setIsLoading(false); }
+    } catch (err) {
+      console.error('Error cargando denuncias:', err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
     const lower = searchTerm.toLowerCase();
     const filtered = complaints.filter(c => {
-      const matchesSearch = c.codigo_seguimiento.toLowerCase().includes(lower) || 
-                            c.plate.toLowerCase().includes(lower);
-      const matchesCategory = selectedCategory === '' || c.categoryRaw === selectedCategory;
+      const matchesSearch = 
+        c.codigo_seguimiento.toLowerCase().includes(lower) ||
+        (c.plate && c.plate.toLowerCase().includes(lower));
+      
+      const matchesCategory = selectedCategory === '' || 
+        c.categoria_slug === selectedCategory;
+
       return matchesSearch && matchesCategory;
     });
     setFilteredData(filtered);
   }, [searchTerm, selectedCategory, complaints]);
 
+  // CORRECCIÓN: Categorías dinámicas desde los datos reales (no hardcodeadas)
+  const availableCategories = Array.from(
+    new Set(complaints.map(c => c.categoria_slug).filter(Boolean))
+  ).map(slug => {
+    const complaint = complaints.find(c => c.categoria_slug === slug);
+    return {
+      id: slug,
+      label: complaint?.categoria_titulo || slug.charAt(0).toUpperCase() + slug.slice(1)
+    };
+  });
+
   return (
     <main className="container" style={{ padding: '40px 0' }}>
-      
       {/* HEADER MEJORADO - BOTÓN VOLVER VISIBLE */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
         <div>
@@ -148,18 +157,16 @@ export default function ViewAllComplaints({ onBack, onViewDetails }) {
             Listado oficial de reportes ciudadanos registrados.
           </p>
         </div>
-
-        {/* BOTÓN VOLVER CON EL COLOR DE LA BARRA SUPERIOR */}
-        <Button 
+        <Button
           onClick={onBack}
           icon={
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M19 12H5M12 19l-7-7 7-7"/>
             </svg>
           }
-          style={{ 
-            backgroundColor: 'var(--deep-blue)', 
-            color: 'white', 
+          style={{
+            backgroundColor: 'var(--deep-blue)',
+            color: 'white',
             padding: '12px 24px',
             borderRadius: '12px',
             fontSize: '1.1rem',
@@ -187,37 +194,39 @@ export default function ViewAllComplaints({ onBack, onViewDetails }) {
 
       {/* FILTROS */}
       <div style={{ display: 'flex', gap: '20px', marginBottom: '30px' }}>
-        <input 
-          type="text" 
+        <input
+          type="text"
           placeholder="Buscar por código o placa..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          style={{ 
-            flex: 2, padding: '18px 25px', borderRadius: '16px', border: '2px solid #e2e8f0', 
+          style={{
+            flex: 2, padding: '18px 25px', borderRadius: '16px', border: '2px solid #e2e8f0',
             fontSize: '1.1rem', fontWeight: 600, outline: 'none'
           }}
         />
         <select
           value={selectedCategory}
           onChange={(e) => setSelectedCategory(e.target.value)}
-          style={{ 
-            flex: 1, padding: '18px', borderRadius: '16px', border: '2px solid #e2e8f0', 
+          style={{
+            flex: 1, padding: '18px', borderRadius: '16px', border: '2px solid #e2e8f0',
             fontSize: '1.1rem', fontWeight: 600, backgroundColor: 'white'
           }}
         >
           <option value="">Todas las Categorías</option>
-          {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.label}</option>)}
+          {availableCategories.map(cat => (
+            <option key={cat.id} value={cat.id}>{cat.label}</option>
+          ))}
         </select>
       </div>
 
       {/* CONTENEDOR TIPO TABLA */}
-      <div style={{ 
-        backgroundColor: 'white', borderRadius: '24px', overflow: 'hidden', 
-        boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', border: '1px solid #e2e8f0' 
+      <div style={{
+        backgroundColor: 'white', borderRadius: '24px', overflow: 'hidden',
+        boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', border: '1px solid #e2e8f0'
       }}>
-        <div style={{ 
-          display: 'grid', gridTemplateColumns: '1.5fr 1.2fr 1.8fr 1.5fr 1.2fr', padding: '22px 24px', 
-          backgroundColor: '#f8fafc', borderBottom: '2px solid #e2e8f0', 
+        <div style={{
+          display: 'grid', gridTemplateColumns: '1.5fr 1.2fr 1.8fr 1.5fr 1.2fr', padding: '22px 24px',
+          backgroundColor: '#f8fafc', borderBottom: '2px solid #e2e8f0',
           fontSize: '0.95rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '1.5px', gap: '12px'
         }}>
           <span>Cód. Seguimiento</span>
